@@ -1,0 +1,29 @@
+/env/
+.env
+/var/
+__pycache__/
+*.pyc
+*.log
+.env.*
+!.env.example
+/node_modules/
+
+# Private keys and exported credentials
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+service-account*.json
+service_account*.json
+
+# Local databases and their auxiliary files
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*.db

@@ -1,0 +1,131 @@
+[
+  {
+    "game": "cs2",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/730/162664aa5da85f418105350c5d67ca565f6c3713/header.jpg?t=1791824795",
+    "page": "https://store.steampowered.com/app/730/",
+    "title": "Counter-Strike 2",
+    "file": "cs2.jpg"
+  },
+  {
+    "game": "dota2",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/570/header.jpg?t=1791407503",
+    "page": "https://store.steampowered.com/app/570/",
+    "title": "Dota 2",
+    "file": "dota2.jpg"
+  },
+  {
+    "game": "gtav",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/271590/header.jpg?t=1765387725",
+    "page": "https://store.steampowered.com/app/271590/",
+    "title": "Grand Theft Auto V Legacy",
+    "file": "gtav.jpg"
+  },
+  {
+    "game": "pubg",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/578080/841ea38bc58cabb70aef65365cf50bc2d79329d9/header.jpg?t=1786493086",
+    "page": "https://store.steampowered.com/app/578080/",
+    "title": "PUBG: BATTLEGROUNDS",
+    "file": "pubg.jpg"
+  },
+  {
+    "game": "apex",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1172470/6cf04767652d703b6050da84b82cfb1194258d7d/header.jpg?t=1790164440",
+    "page": "https://store.steampowered.com/app/1172470/",
+    "title": "Apex Legends™",
+    "file": "apex.jpg"
+  },
+  {
+    "game": "rust",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/252490/header.jpg?t=1781536981",
+    "page": "https://store.steampowered.com/app/252490/",
+    "title": "Rust",
+    "file": "rust.jpg"
+  },
+  {
+    "game": "r6",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/359550/555b5051d332c5f6b86f88ba5dfd80404dc91aaa/header_alt_assets_27.jpg?t=1792001976",
+    "page": "https://store.steampowered.com/app/359550/",
+    "title": "Tom Clancy's Rainbow Six Siege",
+    "file": "r6.jpg"
+  },
+  {
+    "game": "overwatch2",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2357570/5c208b2699cd38ed6125d039be388fa744db54a4/header_alt_assets_23.jpg?t=1791576843",
+    "page": "https://store.steampowered.com/app/2357570/",
+    "title": "Overwatch®",
+    "file": "overwatch2.jpg"
+  },
+  {
+    "game": "warthunder",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/236390/38881c549e623fe432af4e7b4bc3952b443906f5/header.jpg?t=1791988478",
+    "page": "https://store.steampowered.com/app/236390/",
+    "title": "War Thunder",
+    "file": "warthunder.jpg"
+  },
+  {
+    "game": "ets2",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/227300/d3c44cfff95e8223687121b05c80e594d35c4c53/header_alt_assets_9.jpg?t=1792055307",
+    "page": "https://store.steampowered.com/app/227300/",
+    "title": "Euro Truck Simulator 2",
+    "file": "ets2.jpg"
+  },
+  {
+    "game": "rocketleague",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/252950/3abd9ab079c8896a4762dbe34a853d89b7f704df/header_alt_assets_17.jpg?t=1791210513",
+    "page": "https://store.steampowered.com/app/252950/",
+    "title": "Rocket League®",
+    "file": "rocketleague.jpg"
+  },
+  {
+    "game": "cod",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1938090/23af6cf41e2d09620caa07700a4cb3288dbcbaa8/header.jpg?t=1792179713",
+    "page": "https://store.steampowered.com/app/1938090/",
+    "title": "Call of Duty®",
+    "file": "cod.jpg"
+  },
+  {
+    "game": "minecraft",
+    "image": "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/key-art/About-Minecraft_Featured-Image-0_570x321.jpg",
+    "page": "https://www.minecraft.net/en-us/about-minecraft",
+    "file": "minecraft.jpg"
+  },
+  {
+    "game": "valorant",
+    "image": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/cbf4460132cdfeb2a97fad5f9dd25ba0bc058f76-128x128.png?accountingTag=VAL?w=1200&h=630&fm=webp&fit=crop&crop=center",
+    "page": "https://playvalorant.com/en-us/",
+    "file": "valorant.webp"
+  },
+  {
+    "game": "fortnite",
+    "image": "https://cdn1.epicgames.com/spt-assets/prod-fn/FNBR_42-30_Fortnitemares_KeyArt_Fortnitemares_EGS_Launcher_Blade_2560x1440-66c1t.jpg?h=720&quality=medium&resize=1&w=1280",
+    "page": "https://store.epicgames.com/p/fortnite/",
+    "file": "fortnite.jpg"
+  },
+  {
+    "game": "lol",
+    "image": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/565197caf987af4e4da307df6e2b235a28714736-837x469.jpg?accountingTag=LoL?w=1200&h=630&fm=webp&fit=crop&crop=center",
+    "page": "https://www.leagueoflegends.com/en-us/",
+    "file": "lol.webp"
+  },
+  {
+    "game": "roblox",
+    "image": "https://about.roblox.com/images/Roblox_Logo_White.svg",
+    "page": "https://about.roblox.com/press-kit",
+    "title": "Roblox",
+    "file": "roblox.svg"
+  },
+  {
+    "game": "fc",
+    "image": "https://drop-assets.ea.com/images/W7jZ4vGojPtXKtHG0UAQQ/5e4c25d06e2346d2ef1f0db4e130b812/ea-primary-fc-logo-hero-med.svg",
+    "page": "https://www.ea.com/games/ea-sports-fc",
+    "title": "EA Sports FC",
+    "file": "fc.svg"
+  },
+  {
+    "game": "chrome",
+    "image": "https://www.google.com/chrome/static/images/chrome-logo-m100.svg",
+    "page": "https://www.google.com/chrome/",
+    "title": "Google Chrome",
+    "file": "chrome.svg"
+  }
+]

@@ -1,0 +1,195 @@
+{
+  "policy": "package-estimate-v1",
+  "packages": [
+    {
+      "id": "standard-1-hour",
+      "room": "standard",
+      "title": "1 час",
+      "name": "Standard · 1 час",
+      "price": 900,
+      "kind": "hourly",
+      "hours": 1,
+      "condition": "Обычный почасовой тариф."
+    },
+    {
+      "id": "standard-3-hours",
+      "room": "standard",
+      "title": "3 часа",
+      "name": "Standard · 3 часа",
+      "price": 2100,
+      "kind": "hours",
+      "hours": 3,
+      "condition": "В прайсе: время не сгорает 96 часов."
+    },
+    {
+      "id": "standard-5-hours",
+      "room": "standard",
+      "title": "5 часов",
+      "name": "Standard · 5 часов",
+      "price": 2800,
+      "kind": "hours",
+      "hours": 5,
+      "condition": "В прайсе: время не сгорает 96 часов."
+    },
+    {
+      "id": "standard-night",
+      "room": "standard",
+      "title": "Ночь",
+      "name": "Standard · Ночь",
+      "price": 3000,
+      "kind": "window",
+      "start": 1320,
+      "end": 1920,
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "assumedWindow": false,
+      "condition": "22:00–08:00 следующего дня."
+    },
+    {
+      "id": "standard-day",
+      "room": "standard",
+      "title": "Дневной",
+      "name": "Standard · Дневной",
+      "price": 1500,
+      "kind": "window",
+      "start": 720,
+      "end": 1080,
+      "weekdays": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "condition": "Пн–пт, 12:00–18:00 · Standard."
+    },
+    {
+      "id": "duo-1-hour",
+      "room": "duo",
+      "title": "1 час",
+      "name": "Duo · 1 час",
+      "price": 1000,
+      "kind": "hourly",
+      "hours": 1,
+      "condition": "Обычный почасовой тариф."
+    },
+    {
+      "id": "duo-3-hours",
+      "room": "duo",
+      "title": "3 часа",
+      "name": "Duo · 3 часа",
+      "price": 2300,
+      "kind": "hours",
+      "hours": 3,
+      "condition": "В прайсе: время не сгорает 96 часов."
+    },
+    {
+      "id": "duo-5-hours",
+      "room": "duo",
+      "title": "5 часов",
+      "name": "Duo · 5 часов",
+      "price": 3300,
+      "kind": "hours",
+      "hours": 5,
+      "condition": "В прайсе: время не сгорает 96 часов."
+    },
+    {
+      "id": "duo-night",
+      "room": "duo",
+      "title": "Ночь",
+      "name": "Duo · Ночь",
+      "price": 4000,
+      "kind": "window",
+      "start": 1320,
+      "end": 1920,
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "assumedWindow": false,
+      "condition": "22:00–08:00 следующего дня. Интервал опубликован на официальной странице клуба."
+    },
+    {
+      "id": "vip-1-hour",
+      "room": "vip",
+      "title": "1 час",
+      "name": "VIP · 1 час",
+      "price": 1500,
+      "kind": "hourly",
+      "hours": 1,
+      "condition": "Обычный почасовой тариф."
+    },
+    {
+      "id": "vip-3-hours",
+      "room": "vip",
+      "title": "3 часа",
+      "name": "VIP · 3 часа",
+      "price": 3500,
+      "kind": "hours",
+      "hours": 3,
+      "condition": "В прайсе: время не сгорает 96 часов."
+    },
+    {
+      "id": "vip-5-hours",
+      "room": "vip",
+      "title": "5 часов",
+      "name": "VIP · 5 часов",
+      "price": 4500,
+      "kind": "hours",
+      "hours": 5,
+      "condition": "В прайсе: время не сгорает 96 часов."
+    },
+    {
+      "id": "vip-night",
+      "room": "vip",
+      "title": "Ночь",
+      "name": "VIP · Ночь",
+      "price": 5000,
+      "kind": "window",
+      "start": 1320,
+      "end": 1920,
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "assumedWindow": false,
+      "condition": "22:00–08:00 следующего дня."
+    },
+    {
+      "id": "standard-student",
+      "room": "standard",
+      "title": "Студенческий",
+      "name": "Standard · Студенческий",
+      "price": 1000,
+      "kind": "window",
+      "start": 660,
+      "end": 1020,
+      "weekdays": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "manualOnly": true,
+      "condition": "Пн–пт, 11:00–17:00. Статус студента подтверждается клубом; расчёт по телефону."
+    }
+  ]
+}

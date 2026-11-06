@@ -1,0 +1,35 @@
+.pixel-account-link {
+  display: inline-grid;
+  place-items: center;
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: var(--pixel-muted);
+  text-decoration: none;
+}
+.pixel-account-link:is(:hover, :focus-visible) {
+  background: var(--pixel-surface);
+  color: var(--pixel-ink);
+}
+.pixel-account-link:focus-visible {
+  outline: 2px solid var(--pixel-focus);
+  outline-offset: 2px;
+}
+.pixel-account-link[data-signed-in]::after {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-end: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pixel-action);
+  box-shadow: 0 0 0 2px var(--pixel-canvas);
+  content: "";
+}
+@media (max-width: 767px) {
+  .premium-header:has(.pixel-account-link) > .club-location { display: none; }
+  .premium-header:has(.pixel-account-link) > nav { order: 1; }
+  .pixel-account-link { margin-inline-start: auto; }
+}

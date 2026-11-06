@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ru" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Управляйте балансом и записями на визит в личном кабинете PIXEL.">
+  <title>Вход | PIXEL</title>
+  <link rel="icon" href="assets/pixel/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/vendor/bootstrap.min.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/Anuar.css">
+  <link rel="stylesheet" href="css/premium.css?v=12">
+  <link rel="stylesheet" href="css/portal.css?v=5">
+  <link rel="stylesheet" href="css/booking.css?v=3">
+  <link rel="stylesheet" href="css/account.css?v=7">
+  <script src="js/account.js?v=11" defer></script>
+</head>
+<body class="pixel-booking-page pixel-account-page">
+  <a class="visually-hidden-focusable pixel-skip" href="#main-content">Перейти к содержимому</a>
+  <header class="pixel-site-header">
+    <div class="container premium-header">
+      <a class="pixel-brand" href="index.html" aria-label="Компьютерный клуб Pixel — главная">PIXEL<span>_</span></a>
+      <nav aria-label="Основная навигация">
+        <a href="index.html">Главная</a>
+        <a href="rooms.html">Залы и цены</a>
+        <a href="games.html">Игры</a>
+        <a href="booking.html">План визита</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <div class="container booking-shell account-shell">
+      <header class="booking-intro">
+        <h1 id="account-title" tabindex="-1">Войти в PIXEL</h1>
+      </header>
+      <p id="account-status" class="account-notice" role="status"></p>
+      <p id="account-error" class="account-error" role="alert"></p>
+      <button id="account-retry" class="visit-link" type="button" hidden>Повторить</button>
+      <div id="account-entry" hidden>
+        <form id="account-login-form" class="account-form" method="post">
+          <div>
+            <label for="account-login-email">Электронная почта</label>
+            <input id="account-login-email" name="email" class="form-control" type="email"
+              autocomplete="username" maxlength="254" required>
+          </div>
+          <div>
+            <label for="account-login-password">Пароль</label>
+            <input id="account-login-password" name="password" class="form-control" type="password"
+              autocomplete="current-password" maxlength="128" required>
+          </div>
+          <button id="account-login" class="btn btn-primary account-action" type="submit">Войти</button>
+          <button id="account-show-register" class="visit-link account-switch" type="button">Создать аккаунт</button>
+        </form>
+        <form id="account-register-form" class="account-form" method="post" hidden>
+          <div>
+            <label for="account-register-email">Электронная почта</label>
+            <input id="account-register-email" name="email" class="form-control" type="email"
+              autocomplete="username" maxlength="254" required>
+          </div>
+          <div>
+            <label for="account-register-password">Пароль</label>
+            <input id="account-register-password" name="password" class="form-control" type="password"
+              autocomplete="new-password" minlength="12" maxlength="128" aria-describedby="account-password-hint" required>
+            <p id="account-password-hint" class="account-hint">Не менее 12 символов.</p>
+          </div>
+          <button id="account-register" class="btn btn-primary account-action" type="submit">Зарегистрироваться</button>
+          <button id="account-show-login" class="visit-link account-switch" type="button">Уже есть аккаунт? Войти</button>
+        </form>
+        <div id="account-google-option" class="account-google-option" hidden>
+          <button id="account-google" class="account-google" type="button" disabled>
+            <!-- Official Google Identity brand icon. -->
+            <img src="assets/pixel/google-g.png" width="18" height="18" alt="">
+            Войти через Google
+          </button>
+        </div>
+      </div>
+      <section id="account-profile" aria-labelledby="account-title" hidden>
+        <div class="account-balance-card">
+          <div class="account-balance-head">
+            <dl class="account-balance">
+              <dt>Баланс</dt>
+              <dd id="account-balance"></dd>
+            </dl>
+            <button id="account-topup-toggle" class="btn btn-primary account-action" type="button"
+              aria-expanded="false" aria-controls="account-topup-form" hidden>Пополнить баланс</button>
+          </div>
+          <form id="account-topup-form" class="account-form account-topup-form" method="post" hidden>
+            <fieldset>
+              <legend>Выберите сумму</legend>
+              <div class="account-topup-choices">
+                <label><input class="visually-hidden" type="radio" name="preset" value="500"><span>500 ₸</span></label>
+                <label><input class="visually-hidden" type="radio" name="preset" value="1000" checked><span>1 000 ₸</span></label>
+                <label><input class="visually-hidden" type="radio" name="preset" value="2000"><span>2 000 ₸</span></label>
+                <label><input class="visually-hidden" type="radio" name="preset" value="5000"><span>5 000 ₸</span></label>
+              </div>
+            </fieldset>
+            <div class="account-topup-custom">
+              <label for="account-topup-amount">Сумма в тенге</label>
+              <input id="account-topup-amount" name="amount" class="form-control" type="number"
+                value="1000" min="100" max="50000" step="1" inputmode="numeric" required>
+            </div>
+            <button id="account-topup-submit" class="btn btn-primary account-action" type="submit">Перейти к оплате</button>
+          </form>
+          <div class="account-balance-support">
+            <p id="account-wallet-notice" class="account-wallet-status" role="status"></p>
+            <p id="account-topup-status" class="account-wallet-status" role="status"></p>
+            <div class="account-topup-recovery">
+              <button id="account-wallet-retry" class="visit-link" type="button" hidden>Обновить баланс</button>
+              <a id="account-topup-resume" class="visit-link" href="checkout.html" hidden>Продолжить оплату</a>
+              <button id="account-topup-refresh" class="visit-link" type="button" hidden>Проверить оплату</button>
+            </div>
+          </div>
+        </div>
+        <a id="account-checkout-return" class="visit-link account-checkout-return" href="booking.html?checkout=1" hidden>
+          Вернуться к оформлению
+        </a>
+        <section id="account-visits" class="account-visits" aria-labelledby="account-visits-title" hidden>
+          <h2 id="account-visits-title">Предстоящие визиты</h2>
+          <ul id="account-visits-list" class="account-visits-list"></ul>
+          <p id="account-visits-notice" class="account-wallet-status" role="status" tabindex="-1"></p>
+          <button id="account-visits-retry" class="visit-link" type="button" hidden>Обновить визиты</button>
+        </section>
+        <section class="account-identity" aria-labelledby="account-details-title">
+          <h2 id="account-details-title">Данные аккаунта</h2>
+          <dl class="account-details">
+            <div id="account-name-row" hidden>
+              <dt>Имя</dt>
+              <dd id="account-name"></dd>
+            </div>
+            <div id="account-email-row" hidden>
+              <dt>Почта</dt>
+              <dd id="account-email"></dd>
+            </div>
+          </dl>
+          <button id="account-logout" class="visit-link" type="button">Выйти</button>
+        </section>
+      </section>
+      <noscript><p class="account-notice">Включите JavaScript, чтобы войти.</p></noscript>
+    </div>
+  </main>
+</body>
+</html>

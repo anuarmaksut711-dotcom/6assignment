@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Пополнение баланса | PIXEL</title>
+  <link rel="icon" href="assets/pixel/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/vendor/bootstrap.min.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/Anuar.css">
+  <link rel="stylesheet" href="css/premium.css?v=12">
+  <link rel="stylesheet" href="css/portal.css?v=5">
+  <link rel="stylesheet" href="css/booking.css?v=3">
+  <link rel="stylesheet" href="css/checkout.css?v=4">
+  <script src="js/checkout.js?v=9" defer></script>
+</head>
+<body class="pixel-booking-page">
+  <header class="pixel-site-header">
+    <div class="container premium-header">
+      <a class="pixel-brand" href="index.html" aria-label="Компьютерный клуб Pixel — главная">PIXEL<span>_</span></a>
+    </div>
+  </header>
+  <main class="container booking-shell checkout-shell">
+    <a id="checkout-back" class="visit-link checkout-back" href="account.html">← В профиль</a>
+    <header class="booking-intro">
+      <h1 id="checkout-title">Пополнение баланса</h1>
+    </header>
+    <p id="checkout-status" class="checkout-notice" role="status"></p>
+    <p id="checkout-error" class="checkout-notice checkout-error" role="alert"></p>
+    <button id="checkout-retry" class="visit-link" type="button" hidden>Проверить ещё раз</button>
+    <section id="checkout-order" aria-label="Сумма и тестовые данные" hidden>
+      <div class="checkout-summary">
+        <dl>
+          <dt id="checkout-amount-label">Сумма пополнения</dt>
+          <dd id="checkout-amount"></dd>
+        </dl>
+        <p id="checkout-visit" class="checkout-visit" hidden></p>
+      </div>
+      <form id="checkout-card-form" class="checkout-card-form" method="post" autocomplete="off" novalidate>
+        <div class="checkout-card-fields">
+          <div class="checkout-card-number">
+            <label for="checkout-test-number">Номер карты</label>
+            <input id="checkout-test-number" class="form-control" type="text" inputmode="numeric"
+              autocomplete="off" maxlength="19" required>
+          </div>
+          <div>
+            <label for="checkout-test-expiry">Месяц и год</label>
+            <input id="checkout-test-expiry" class="form-control" type="text" inputmode="numeric"
+              autocomplete="off" maxlength="5" placeholder="ММ/ГГ" required>
+          </div>
+          <div>
+            <label for="checkout-test-code">CVC</label>
+            <input id="checkout-test-code" class="form-control" type="text" inputmode="numeric"
+              autocomplete="off" maxlength="3" required>
+          </div>
+        </div>
+        <button id="checkout-pay" class="btn btn-primary checkout-action" type="submit">Оплатить</button>
+      </form>
+    </section>
+    <noscript><p class="checkout-notice">Для оформления включите JavaScript.</p></noscript>
+  </main>
+</body>
+</html>

@@ -1,0 +1,347 @@
+[
+  {
+    "name": "two PCs need two packages",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 2,
+      "date": "2026-10-23",
+      "time": "19:00",
+      "packageId": "standard-3-hours"
+    },
+    "expected": {
+      "total": 4200,
+      "quantity": 2,
+      "coveredMinutes": 120,
+      "unusedMinutes": 60,
+      "extraHours": 0
+    }
+  },
+  {
+    "name": "extra hour on both PCs",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 4,
+      "date": "2026-10-23",
+      "time": "19:00",
+      "packageId": "standard-3-hours"
+    },
+    "expected": {
+      "total": 6000,
+      "extraTotal": 1800,
+      "extraHours": 1
+    }
+  },
+  {
+    "name": "five-hour package unused hour",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 4,
+      "date": "2026-10-23",
+      "time": "19:00",
+      "packageId": "standard-5-hours"
+    },
+    "expected": {
+      "total": 5600,
+      "unusedMinutes": 60
+    }
+  },
+  {
+    "name": "twelve-hour visit",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 12,
+      "date": "2026-10-23",
+      "time": "19:00",
+      "packageId": "standard-5-hours"
+    },
+    "expected": {
+      "total": 18200,
+      "extraHours": 7
+    }
+  },
+  {
+    "name": "VIP whole group",
+    "plan": {
+      "room": "vip",
+      "guests": 5,
+      "duration": 5,
+      "date": "2026-10-23",
+      "time": "19:00",
+      "packageId": "vip-3-hours"
+    },
+    "expected": {
+      "total": 32500,
+      "quantity": 5
+    }
+  },
+  {
+    "name": "Duo five hours",
+    "plan": {
+      "room": "duo",
+      "guests": 2,
+      "duration": 5,
+      "date": "2026-10-23",
+      "time": "19:00",
+      "packageId": "duo-5-hours"
+    },
+    "expected": {
+      "total": 6600
+    }
+  },
+  {
+    "name": "full night",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 10,
+      "date": "2026-10-23",
+      "time": "22:00",
+      "packageId": "standard-night"
+    },
+    "expected": {
+      "total": 6000,
+      "coveredMinutes": 600,
+      "unusedMinutes": 0
+    }
+  },
+  {
+    "name": "night and morning surcharge",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 11,
+      "date": "2026-10-23",
+      "time": "23:00",
+      "packageId": "standard-night"
+    },
+    "expected": {
+      "total": 9600,
+      "extraHours": 2,
+      "unusedMinutes": 60
+    }
+  },
+  {
+    "name": "fractional surcharge rounds up",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 9,
+      "date": "2026-10-23",
+      "time": "23:30",
+      "packageId": "standard-night"
+    },
+    "expected": {
+      "total": 7800,
+      "extraHours": 1,
+      "coveredMinutes": 510
+    }
+  },
+  {
+    "name": "previous calendar night",
+    "plan": {
+      "room": "standard",
+      "guests": 1,
+      "duration": 1,
+      "date": "2026-10-23",
+      "time": "07:30",
+      "packageId": "standard-night"
+    },
+    "expected": {
+      "total": 3900,
+      "coveredMinutes": 30
+    }
+  },
+  {
+    "name": "night ended",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 2,
+      "date": "2026-10-23",
+      "time": "08:00",
+      "packageId": "standard-night"
+    },
+    "expected": {
+      "code": "window"
+    }
+  },
+  {
+    "name": "hour before night",
+    "plan": {
+      "room": "standard",
+      "guests": 1,
+      "duration": 4,
+      "date": "2026-10-23",
+      "time": "19:00",
+      "packageId": "standard-night"
+    },
+    "expected": {
+      "total": 5700,
+      "coveredMinutes": 60,
+      "extraHours": 3
+    }
+  },
+  {
+    "name": "night boundary is exclusive",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 3,
+      "date": "2026-10-23",
+      "time": "19:00",
+      "packageId": "standard-night"
+    },
+    "expected": {
+      "code": "window"
+    }
+  },
+  {
+    "name": "day with both surcharges",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 8,
+      "date": "2026-10-23",
+      "time": "11:00",
+      "packageId": "standard-day"
+    },
+    "expected": {
+      "total": 6600,
+      "coveredMinutes": 360,
+      "extraHours": 2
+    }
+  },
+  {
+    "name": "partial day",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 1,
+      "date": "2026-10-23",
+      "time": "17:30",
+      "packageId": "standard-day"
+    },
+    "expected": {
+      "total": 4800,
+      "coveredMinutes": 30,
+      "extraHours": 1
+    }
+  },
+  {
+    "name": "weekend day unavailable",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 2,
+      "date": "2026-10-24",
+      "time": "12:00",
+      "packageId": "standard-day"
+    },
+    "expected": {
+      "code": "weekday"
+    }
+  },
+  {
+    "name": "Duo published night interval",
+    "plan": {
+      "room": "duo",
+      "guests": 2,
+      "duration": 10,
+      "date": "2026-10-23",
+      "time": "22:00",
+      "packageId": "duo-night"
+    },
+    "expected": {
+      "total": 8000,
+      "assumedWindow": false
+    }
+  },
+  {
+    "name": "wrong room",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 2,
+      "date": "2026-10-23",
+      "time": "19:00",
+      "packageId": "vip-3-hours"
+    },
+    "expected": {
+      "code": "package"
+    }
+  },
+  {
+    "name": "student eligibility manual",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 2,
+      "date": "2026-10-23",
+      "time": "19:00",
+      "packageId": "standard-student"
+    },
+    "expected": {
+      "code": "manual"
+    }
+  },
+  {
+    "name": "invalid date",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 2,
+      "date": "2026-02-30",
+      "time": "19:00",
+      "packageId": "standard-day"
+    },
+    "expected": {
+      "code": "date-time"
+    }
+  },
+  {
+    "name": "invalid time",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 2,
+      "date": "2026-10-23",
+      "time": "24:00",
+      "packageId": "standard-night"
+    },
+    "expected": {
+      "code": "date-time"
+    }
+  },
+  {
+    "name": "capacity",
+    "plan": {
+      "room": "duo",
+      "guests": 3,
+      "duration": 2,
+      "date": "2026-10-23",
+      "time": "19:00",
+      "packageId": "duo-3-hours"
+    },
+    "expected": {
+      "code": "inputs"
+    }
+  },
+  {
+    "name": "untrusted package identifier",
+    "plan": {
+      "room": "standard",
+      "guests": 2,
+      "duration": 2,
+      "date": "2026-10-23",
+      "time": "19:00",
+      "packageId": []
+    },
+    "expected": {
+      "code": "package"
+    }
+  }
+]

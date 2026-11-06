@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ru" data-bs-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Pixel в Астане: реальные фотографии клуба, три зала, цены и план визита. Круглосуточно.">
+<title>Игры и приложения | Pixel</title>
+<link rel="icon" href="assets/pixel/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/vendor/bootstrap.min.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/Anuar.css">
+<link rel="stylesheet" href="css/premium.css?v=13">
+<!-- jQuery 3.7.1 full build: effects are included; defer preserves library-before-script order. -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous" defer></script>
+<script src="js/main.js" defer></script>
+<script src="js/packages.js" defer></script>
+<script src="js/games.js" defer>
+</script>
+<link rel="stylesheet" href="css/portal.css?v=5">
+<link rel="stylesheet" href="css/account-nav.css?v=3">
+<script src="js/account-nav.js?v=1" defer></script>
+</head>
+<body class="pixel-games-page"><a class="visually-hidden-focusable pixel-skip" href="#main-content">Перейти к содержимому</a>
+<header class="pixel-site-header">
+<div class="container premium-header"><a class="pixel-brand" href="index.html" aria-label="Компьютерный клуб Pixel — главная">PIXEL<span>_</span></a><span class="club-location">Астана · 24/7</span>
+<nav aria-label="Основная навигация"><a href="index.html">Главная</a><a href="rooms.html">Залы и цены</a><a href="games.html" aria-current="page">Игры</a><a href="booking.html">План визита</a>
+</nav>
+<a class="pixel-account-link" href="account.html" aria-label="Личный кабинет" title="Личный кабинет">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true" focusable="false">
+    <circle cx="12" cy="7.5" r="3.5"/>
+    <path d="M5 20v-1a7 7 0 0 1 14 0v1"/>
+  </svg>
+</a>
+</div>
+</header>
+<main id="main-content" tabindex="-1">
+      <header class="container pixel-price-intro">
+<h1 class="mb-2">Во что играем?</h1>
+</header>
+      <section class="container" aria-label="Список игр и приложений">
+        <div id="games-tools" class="pixel-game-tools mb-3" hidden>
+          <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-6">
+              <label for="games-search" class="form-label">Поиск по названию</label>
+              <input id="games-search" class="form-control" type="search" placeholder="Например, CS2 или Minecraft" maxlength="80" autocomplete="off" aria-controls="games-list apps-list">
+            </div>
+            <div class="col-12 col-md-4">
+              <label for="games-category" class="form-label">Жанр</label>
+              <select id="games-category" class="form-select" aria-controls="games-list apps-list">
+                <option value="all">Все жанры</option>
+                <option value="shooters">Шутеры</option>
+                <option value="battle-royale">Королевская битва</option>
+                <option value="sandbox">Песочницы и выживание</option>
+                <option value="moba">Командные стратегии (MOBA)</option>
+                <option value="action">Экшен</option>
+                <option value="sports-simulation">Спорт и симуляторы</option>
+                <option value="apps">Приложения</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-2">
+              <button id="games-reset" class="btn btn-outline-light" type="button">Сбросить</button>
+            </div>
+          </div>
+        </div>
+        <p id="games-results" class="pixel-game-result-count small text-body-secondary mb-3" role="status" aria-live="polite" aria-atomic="true" hidden>
+</p>
+        <div id="games-empty" class="pixel-game-empty card pixel-device-card p-4 mb-4" hidden>
+          <h2 class="h3">Ничего не найдено</h2>
+          <p class="text-body-secondary">Попробуйте другое название или сбросьте поиск и жанр.</p>
+          <button id="games-empty-reset" class="btn btn-outline-light align-self-start" type="button">Сбросить поиск и жанр</button>
+        </div>
+        <noscript>
+<p class="pixel-contact-strip mb-4">Назовите выбранную игру при звонке в клуб: <a href="tel:+77753513693">+7 775 351 36 93</a>.</p>
+</noscript>
+        <h2 id="games-heading" class="h4 mb-3">Игры</h2>
+        <ul id="games-list" class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 g-md-4 list-unstyled">
+
+        </ul>
+        <section id="apps-section" class="mt-5" aria-labelledby="apps-heading">
+<h2 id="apps-heading" class="h4 mb-3">Приложения</h2>
+<ul id="apps-list" class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 list-unstyled"></ul>
+</section>
+      </section>
+    </main>
+<footer class="pixel-site-footer" id="contact">
+<div class="container premium-footer">
+<div><a class="pixel-brand" href="index.html">PIXEL<span>_</span></a>
+<p>Место для вашей игры.</p>
+<p class="small">© 2026 Компьютерный клуб Pixel</p>
+</div>
+<div>
+<h2>Заглядывайте в любое время</h2><address>Астана, проспект Мәңгілік Ел, 36</address>
+<p>Круглосуточно, каждый день</p><a href="https://2gis.kz/astana/firm/70000001081269255" target="_blank" rel="noopener noreferrer">Маршрут в 2ГИС <span class="visually-hidden">(новая вкладка)</span></a>
+</div>
+<div>
+<h2>На связи</h2><a class="footer-phone" href="tel:+77753513693">+7 775 351 36 93</a><a href="help.html">Перед первым визитом</a><a href="https://www.instagram.com/pixel.cyberclub/" target="_blank" rel="noopener noreferrer">Instagram <span class="visually-hidden">(новая вкладка)</span></a><a href="mailto:barmal066@gmail.com">barmal066@gmail.com</a>
+</div>
+</div>
+</footer>
+</body>
+</html>

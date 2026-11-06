@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ru" data-bs-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Выберите время, зал и длительность сеанса в PIXEL, чтобы рассчитать стоимость визита.">
+<title>План визита | Pixel</title>
+<link rel="icon" href="assets/pixel/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/vendor/bootstrap.min.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/Anuar.css">
+<link rel="stylesheet" href="css/premium.css?v=12">
+<!-- jQuery 3.7.1 full build: effects are included; defer preserves library-before-script order. -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous" defer></script>
+<script src="js/main.js" defer></script>
+<script src="js/packages.js?v=6" defer>
+</script>
+<script src="js/package-pricing.js?v=1" defer></script>
+<script src="js/booking-delivery.js?v=1" defer></script>
+<script src="js/booking.js?v=17" defer>
+</script>
+<link rel="stylesheet" href="css/portal.css?v=5">
+<link rel="stylesheet" href="css/account-nav.css?v=3">
+<link rel="stylesheet" href="css/booking.css?v=5">
+</head>
+<body class="pixel-booking-page"><a class="visually-hidden-focusable pixel-skip" href="#main-content">Перейти к содержимому</a>
+<header class="pixel-site-header">
+<div class="container premium-header"><a class="pixel-brand" href="index.html" aria-label="Компьютерный клуб Pixel — главная">PIXEL<span>_</span></a>
+<nav aria-label="Основная навигация"><a href="index.html">Главная</a><a href="rooms.html">Залы и цены</a><a href="games.html">Игры</a><a href="booking.html" aria-current="page">План визита</a>
+</nav>
+<a class="pixel-account-link" href="account.html" aria-label="Личный кабинет" title="Личный кабинет">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true" focusable="false">
+    <circle cx="12" cy="7.5" r="3.5"/>
+    <path d="M5 20v-1a7 7 0 0 1 14 0v1"/>
+  </svg>
+</a>
+</div>
+</header>
+<main id="main-content" tabindex="-1">
+  <div class="container booking-shell">
+    <div class="booking-layout">
+      <div class="booking-form-column">
+        <header class="booking-intro">
+          <h1>План визита</h1>
+        </header>
+        <p id="booking-delivery-state" class="visit-notice" role="status" hidden></p>
+        <p id="booking-status" class="booking-status" role="status" aria-live="polite"></p>
+        <noscript><p>Для расчёта включите JavaScript или <a href="tel:+77753513693">позвоните в клуб</a>.</p></noscript>
+        <form id="booking-form" novalidate>
+          <div id="booking-errors" class="field-error-summary" role="alert" tabindex="-1" hidden></div>
+          <div id="booking-config-step">
+            <fieldset class="visit-group visit-schedule">
+              <legend>Когда играем? <span id="booking-time-help" class="visit-legend-note">Время Астаны</span></legend>
+              <div class="visit-fields">
+                <div>
+                  <label for="booking-date">Дата</label>
+                  <input id="booking-date" class="form-control" type="date" required aria-describedby="booking-date-error">
+                  <p id="booking-date-error" class="field-error" hidden></p>
+                </div>
+                <div>
+                  <label for="booking-time">Начало</label>
+                  <input id="booking-time" class="form-control" type="time" required aria-describedby="booking-time-help booking-time-error">
+                  <p id="booking-time-error" class="field-error" hidden></p>
+                </div>
+                <div>
+                  <label for="booking-guests">Игроки</label>
+                  <div class="visit-stepper">
+                    <button type="button" data-visit-step="guests" data-delta="-1" aria-label="Уменьшить число игроков" disabled>−</button>
+                    <input id="booking-guests" class="form-control" type="number" min="1" max="20" step="1" value="1" required inputmode="numeric" aria-describedby="booking-guests-error">
+                    <button type="button" data-visit-step="guests" data-delta="1" aria-label="Увеличить число игроков">+</button>
+                  </div>
+                  <p id="booking-guests-error" class="field-error" hidden></p>
+                </div>
+                <div id="booking-duration-wrap">
+                  <label for="booking-duration">Часы</label>
+                  <div class="visit-stepper">
+                    <button type="button" data-visit-step="duration" data-delta="-1" aria-label="Уменьшить длительность">−</button>
+                    <input id="booking-duration" class="form-control" type="number" min="1" max="12" step="1" value="2" required inputmode="numeric" aria-describedby="booking-duration-error">
+                    <button type="button" data-visit-step="duration" data-delta="1" aria-label="Увеличить длительность">+</button>
+                  </div>
+                  <p id="booking-duration-error" class="field-error" hidden></p>
+                </div>
+              </div>
+            </fieldset>
+            <fieldset class="visit-group visit-room-group">
+              <legend>Зал <span id="booking-room-unit" class="visit-legend-note">За 1 ПК в час</span></legend>
+              <div id="booking-room-native">
+                <label class="visually-hidden" for="booking-room">Зал</label>
+                <select id="booking-room" name="room" class="form-select">
+                  <option value="standard" selected>Standard · 900 ₸ / ПК / ч</option>
+                  <option value="duo">Duo · 1 000 ₸ / ПК / ч</option>
+                  <option value="vip">VIP · 1 500 ₸ / ПК / ч</option>
+                </select>
+              </div>
+              <div id="booking-room-choices" class="visit-room-choices" aria-label="Зал" aria-describedby="booking-room-unit" role="radiogroup" hidden></div>
+            </fieldset>
+          </div>
+          <section id="booking-contact-step" class="visit-group" aria-labelledby="booking-contact-title" hidden>
+            <h2 id="booking-contact-title">Контакты для подтверждения</h2>
+            <fieldset id="booking-contact-fields" class="visit-fields">
+              <legend class="visually-hidden">Контактные данные</legend>
+              <div>
+                <label for="booking-name">Имя</label>
+                <input id="booking-name" name="name" class="form-control" type="text" required minlength="2" maxlength="80" autocomplete="name" aria-describedby="booking-name-error">
+                <p id="booking-name-error" class="field-error" hidden></p>
+              </div>
+              <div>
+                <label for="booking-phone">Телефон</label>
+                <input id="booking-phone" name="phone" class="form-control" type="tel" required maxlength="32" inputmode="tel" autocomplete="tel" placeholder="+7 700 000 00 00" aria-describedby="booking-phone-error">
+                <p id="booking-phone-error" class="field-error" hidden></p>
+
+              </div>
+            </fieldset>
+            <details class="visit-disclosure visit-email">
+              <summary>Добавить e-mail</summary>
+              <div class="visit-disclosure-body" id="booking-email-slot"></div>
+            </details>
+          </section>
+          <details id="booking-extras" class="visit-disclosure visit-extras">
+            <summary>Пакет и пожелания <span id="booking-options-caption"></span></summary>
+            <div class="visit-disclosure-body">
+              <div id="booking-rate-options">
+                <div id="packages" class="visit-disclosure-body">
+                  <label for="booking-mode">Способ расчёта</label>
+                  <select id="booking-mode" class="form-select" aria-describedby="booking-mode-error">
+                    <option value="hourly">Почасовой тариф</option>
+                    <option value="packages">Пакет · предварительный расчёт</option>
+                  </select>
+                  <p id="booking-mode-error" class="field-error" hidden></p>
+                  <div id="booking-package-wrap" hidden>
+                    <label for="booking-package">Пакет на одного игрока</label>
+                    <select id="booking-package" class="form-select" aria-describedby="booking-package-condition booking-package-error"></select>
+                    <p id="booking-package-condition" class="form-text"></p>
+                    <p id="booking-package-error" class="field-error" hidden></p>
+                  </div>
+                  <details id="package-picker" class="package-reference">
+                    <summary>Корзина пакетов</summary>
+                    <div class="package-boundary">
+                      <button id="booking-use-hourly" type="button" class="btn btn-outline-light">К почасовому тарифу</button>
+                    </div>
+                    <div id="package-options"></div>
+                    <p id="package-selection-status" role="status" aria-live="polite"></p>
+                    <div id="other-room-packages" hidden></div>
+                  </details>
+                  <a class="visit-resource-link" href="help.html#help-packages">Условия пакетов</a>
+                </div>
+              </div>
+              <details id="preferences" class="visit-disclosure">
+                <summary>Место и игра <span>Необязательно</span></summary>
+                <div class="visit-disclosure-body visit-preference-fields">
+                  <div>
+                    <label for="booking-seat">Предпочтительный ПК</label>
+                    <select id="booking-seat" name="seat" class="form-select" aria-describedby="booking-seat-help">
+                      <option value="" selected>Любой компьютер в выбранном зале</option>
+                        <optgroup label="Standard">
+                          <option value="pc-01">ПК 01</option>
+                          <option value="pc-02">ПК 02</option>
+                          <option value="pc-03">ПК 03</option>
+                          <option value="pc-04">ПК 04</option>
+                          <option value="pc-05">ПК 05</option>
+                          <option value="pc-06">ПК 06</option>
+                          <option value="pc-07">ПК 07</option>
+                          <option value="pc-08">ПК 08</option>
+                          <option value="pc-09">ПК 09</option>
+                          <option value="pc-10">ПК 10</option>
+                          <option value="pc-11">ПК 11</option>
+                          <option value="pc-12">ПК 12</option>
+                          <option value="pc-13">ПК 13</option>
+                          <option value="pc-14">ПК 14</option>
+                          <option value="pc-15">ПК 15</option>
+                          <option value="pc-16">ПК 16</option>
+                          <option value="pc-17">ПК 17</option>
+                          <option value="pc-18">ПК 18</option>
+                          <option value="pc-19">ПК 19</option>
+                          <option value="pc-20">ПК 20</option>
+                        </optgroup>
+                        <optgroup label="Duo">
+                          <option value="duo-01">DUO 01</option>
+                          <option value="duo-02">DUO 02</option>
+                        </optgroup>
+                        <optgroup label="VIP">
+                          <option value="vip-01">VIP 01</option>
+                          <option value="vip-02">VIP 02</option>
+                          <option value="vip-03">VIP 03</option>
+                          <option value="vip-04">VIP 04</option>
+                          <option value="vip-05">VIP 05</option>
+                        </optgroup>
+                    </select>
+                    <p id="booking-seat-help" class="form-text">Посадку подтвердит клуб.</p>
+                  </div>
+                  <div>
+                    <label for="booking-game">Игра</label>
+                    <select id="booking-game" name="game" class="form-select">
+                      <option value="" selected>Пока не выбрали</option>
+                        <option value="cs2">Counter-Strike 2</option>
+                        <option value="fortnite">Fortnite</option>
+                        <option value="minecraft">Minecraft</option>
+                        <option value="dota2">Dota 2</option>
+                        <option value="valorant">Valorant</option>
+                        <option value="gtav">GTA V</option>
+                        <option value="gtaonline">GTA Online</option>
+                        <option value="pubg">PUBG</option>
+                        <option value="apex">Apex Legends</option>
+                        <option value="lol">League of Legends</option>
+                        <option value="rust">Rust</option>
+                        <option value="roblox">Roblox</option>
+                        <option value="fc">EA Sports FC</option>
+                        <option value="cod">Call of Duty</option>
+                        <option value="r6">Rainbow Six Siege</option>
+                        <option value="overwatch2">Overwatch 2</option>
+                        <option value="rocketleague">Rocket League</option>
+                        <option value="warthunder">War Thunder</option>
+                        <option value="ets2">Euro Truck Simulator 2</option>
+                        <option value="chrome">Google Chrome</option>
+                    </select>
+                  </div>
+                  <div id="booking-nearby-wrap" class="form-check" hidden>
+                    <input id="booking-nearby" class="form-check-input" type="checkbox">
+                    <label for="booking-nearby" class="form-check-label">Хотим сидеть рядом</label>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </details>
+          <section class="visit-estimate" id="visit-review" aria-labelledby="booking-call-title">
+            <div class="visit-estimate-line">
+              <h2 id="booking-call-title">Итого</h2>
+              <output id="booking-total" for="booking-room booking-guests booking-duration" aria-live="polite">—</output>
+            </div>
+            <p id="booking-price-note" class="visit-price-note"></p>
+            <p id="booking-end" class="visit-price-note" hidden></p>
+            <details id="booking-packages-section" class="visit-disclosure visit-estimate-detail" hidden>
+              <summary>Расчёт пакета</summary>
+              <p id="booking-package-formula" class="package-formula" hidden></p>
+              <dl id="booking-cart-items" class="review-list package-facts"></dl>
+              <p id="booking-cart-note" class="form-text"></p>
+              <p id="booking-package-math"></p>
+            </details>
+            <button id="booking-submit" class="btn btn-primary visit-next" type="submit" disabled>Сохранить план</button>
+            <p class="visit-price-note visit-save-note" id="booking-submit-note"></p>
+          </section>
+        </form>
+      </div>
+    </div>
+    <dialog class="visit-checkout" id="booking-checkout" aria-labelledby="booking-checkout-title" aria-describedby="booking-checkout-summary booking-checkout-total">
+      <div class="visit-checkout-heading">
+        <h2 id="booking-checkout-title">Оформление визита</h2>
+        <button id="booking-checkout-back" class="visit-link" type="button">Назад</button>
+      </div>
+      <div class="visit-checkout-summary">
+        <p id="booking-checkout-summary"></p>
+        <strong id="booking-checkout-total"></strong>
+      </div>
+      <form id="booking-checkout-form">
+        <fieldset id="booking-checkout-methods">
+          <legend class="visually-hidden">Способ оформления</legend>
+          <label><input name="visit-payment-method" type="radio" value="reserve" checked autofocus> Бронь без оплаты</label>
+          <label><input name="visit-payment-method" type="radio" value="card"> Картой</label>
+          <label><input name="visit-payment-method" type="radio" value="balance"> С баланса</label>
+        </fieldset>
+        <p id="booking-checkout-note" class="visit-checkout-note"></p>
+        <p id="booking-checkout-message" class="visit-checkout-message" role="status"></p>
+        <a id="booking-checkout-wallet" class="visit-link" href="account.html?return=booking&amp;wallet=1" hidden>Пополнить баланс</a>
+        <button id="booking-checkout-submit" class="btn btn-primary" type="submit">Забронировать</button>
+      </form>
+    </dialog>
+    <section id="booking-result" class="visit-result" aria-labelledby="booking-result-title" hidden>
+      <p id="booking-result-status" class="booking-status" role="status"></p>
+      <h2 id="booking-result-title" tabindex="-1">План сохранён</h2>
+      <div id="booking-success" hidden><p></p></div>
+      <div id="booking-saved-price" class="saved-price"></div>
+      <dl id="booking-saved-review" class="review-list"></dl>
+      <div class="visit-result-actions">
+        <a id="booking-call" class="btn btn-primary" href="tel:+77753513693">Позвонить в клуб</a>
+        <a id="booking-edit" class="btn visit-outline" href="booking.html">Новый визит</a>
+      </div>
+    </section>
+    <div class="visit-help" id="booking-help">
+      <a href="help.html#help-payment">Оплата и отмена</a>
+      <button id="booking-reset" class="visit-link" type="button" disabled>Сбросить параметры</button>
+    </div>
+  </div>
+</main>
+</body>
+</html>

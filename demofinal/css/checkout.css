@@ -1,0 +1,32 @@
+.checkout-shell { max-width: 440px; }
+.checkout-shell .booking-intro { margin-bottom: 20px; }
+.checkout-shell .booking-intro h1 { font-size: clamp(1.85rem, 6vw, 2.35rem); }
+.checkout-back { display: inline-flex; align-items: center; margin-bottom: 8px; }
+
+.checkout-summary {
+  padding: 14px 16px;
+  margin: 0 0 14px;
+  border: 1px solid var(--visit-line);
+  border-radius: 9px;
+  background: var(--visit-soft);
+}
+
+.checkout-summary dl { margin: 0; }
+.checkout-summary dt { color: var(--visit-muted); font-size: .875rem; font-weight: 700; }
+.checkout-summary dd { margin: 4px 0 0; font-size: 1.9rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.checkout-visit { margin: 8px 0 0; color: var(--visit-muted); font-size: .875rem; }
+.checkout-notice { color: var(--visit-muted); font-size: .875rem; line-height: 1.5; }
+.checkout-error { color: #9c2430; }
+.checkout-notice:empty { display: none; }
+.checkout-action { width: 100%; min-height: 46px; margin-top: 14px; border-radius: 9px; font-weight: 750; }
+.checkout-shell :is(.checkout-action, .visit-link):focus-visible { outline: 2px solid var(--visit-accent); outline-offset: 3px; }
+.checkout-card-form { margin-top: 16px; }
+.checkout-card-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.checkout-card-number { grid-column: 1 / -1; }
+.checkout-card-fields label { display: block; margin-bottom: 4px; font-size: .875rem; font-weight: 700; }
+.checkout-card-fields .form-control { min-width: 0; min-height: 44px; font-variant-numeric: tabular-nums; }
+.checkout-card-fields .form-control[aria-invalid="true"] { border-color: #9c2430; }
+
+@media (max-width: 575px) {
+  .pixel-booking-page:has(.checkout-shell) .premium-header { height: 60px; padding-top: 0; align-content: center; }
+}
