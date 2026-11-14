@@ -9,19 +9,21 @@
 <link rel="stylesheet" href="assets/vendor/bootstrap.min.css">
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/Anuar.css">
-<link rel="stylesheet" href="css/premium.css?v=12">
+<link rel="stylesheet" href="css/premium.css?v=14">
 <!-- jQuery 3.7.1 full build: effects are included; defer preserves library-before-script order. -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous" defer></script>
-<script src="js/main.js" defer></script>
+<script src="js/main.js?v=2" defer></script>
 <script src="js/packages.js?v=6" defer>
 </script>
 <script src="js/package-pricing.js?v=1" defer></script>
 <script src="js/booking-delivery.js?v=1" defer></script>
-<script src="js/booking.js?v=17" defer>
+<script src="js/booking.js?v=23" defer>
 </script>
 <link rel="stylesheet" href="css/portal.css?v=5">
 <link rel="stylesheet" href="css/account-nav.css?v=3">
-<link rel="stylesheet" href="css/booking.css?v=5">
+<link rel="stylesheet" href="css/booking.css?v=8">
+  <link rel="stylesheet" href="css/language.css">
+  <script src="js/language.js" defer></script>
 </head>
 <body class="pixel-booking-page"><a class="visually-hidden-focusable pixel-skip" href="#main-content">Перейти к содержимому</a>
 <header class="pixel-site-header">
@@ -59,7 +61,7 @@
                 </div>
                 <div>
                   <label for="booking-time">Начало</label>
-                  <input id="booking-time" class="form-control" type="time" required aria-describedby="booking-time-help booking-time-error">
+                  <input id="booking-time" class="form-control" type="text" inputmode="numeric" autocomplete="off" placeholder="18:30" required aria-describedby="booking-time-help booking-time-error">
                   <p id="booking-time-error" class="field-error" hidden></p>
                 </div>
                 <div>
@@ -121,28 +123,12 @@
             <div class="visit-disclosure-body">
               <div id="booking-rate-options">
                 <div id="packages" class="visit-disclosure-body">
-                  <label for="booking-mode">Способ расчёта</label>
-                  <select id="booking-mode" class="form-select" aria-describedby="booking-mode-error">
-                    <option value="hourly">Почасовой тариф</option>
-                    <option value="packages">Пакет · предварительный расчёт</option>
+                  <label for="booking-package">Тариф</label>
+                  <select id="booking-package" class="form-select" aria-describedby="booking-package-condition booking-package-error">
+                    <option value="">По длительности визита</option>
                   </select>
-                  <p id="booking-mode-error" class="field-error" hidden></p>
-                  <div id="booking-package-wrap" hidden>
-                    <label for="booking-package">Пакет на одного игрока</label>
-                    <select id="booking-package" class="form-select" aria-describedby="booking-package-condition booking-package-error"></select>
-                    <p id="booking-package-condition" class="form-text"></p>
-                    <p id="booking-package-error" class="field-error" hidden></p>
-                  </div>
-                  <details id="package-picker" class="package-reference">
-                    <summary>Корзина пакетов</summary>
-                    <div class="package-boundary">
-                      <button id="booking-use-hourly" type="button" class="btn btn-outline-light">К почасовому тарифу</button>
-                    </div>
-                    <div id="package-options"></div>
-                    <p id="package-selection-status" role="status" aria-live="polite"></p>
-                    <div id="other-room-packages" hidden></div>
-                  </details>
-                  <a class="visit-resource-link" href="help.html#help-packages">Условия пакетов</a>
+                  <p id="booking-package-condition" class="form-text"></p>
+                  <p id="booking-package-error" class="field-error" hidden></p>
                 </div>
               </div>
               <details id="preferences" class="visit-disclosure">
@@ -225,17 +211,10 @@
           <section class="visit-estimate" id="visit-review" aria-labelledby="booking-call-title">
             <div class="visit-estimate-line">
               <h2 id="booking-call-title">Итого</h2>
-              <output id="booking-total" for="booking-room booking-guests booking-duration" aria-live="polite">—</output>
+              <output id="booking-total" for="booking-room booking-guests booking-duration booking-package" aria-live="polite">—</output>
             </div>
             <p id="booking-price-note" class="visit-price-note"></p>
             <p id="booking-end" class="visit-price-note" hidden></p>
-            <details id="booking-packages-section" class="visit-disclosure visit-estimate-detail" hidden>
-              <summary>Расчёт пакета</summary>
-              <p id="booking-package-formula" class="package-formula" hidden></p>
-              <dl id="booking-cart-items" class="review-list package-facts"></dl>
-              <p id="booking-cart-note" class="form-text"></p>
-              <p id="booking-package-math"></p>
-            </details>
             <button id="booking-submit" class="btn btn-primary visit-next" type="submit" disabled>Сохранить план</button>
             <p class="visit-price-note visit-save-note" id="booking-submit-note"></p>
           </section>
@@ -270,8 +249,11 @@
       <div id="booking-success" hidden><p></p></div>
       <div id="booking-saved-price" class="saved-price"></div>
       <dl id="booking-saved-review" class="review-list"></dl>
-      <div class="visit-result-actions">
-        <a id="booking-call" class="btn btn-primary" href="tel:+77753513693">Позвонить в клуб</a>
+      <div class="visit-result-actions align-items-start">
+        <details id="booking-call" class="text-center">
+          <summary class="btn btn-primary w-100">Позвонить в клуб</summary>
+          <a class="d-inline-block py-2" href="tel:+77753513693">+7 775 351 36 93</a>
+        </details>
         <a id="booking-edit" class="btn visit-outline" href="booking.html">Новый визит</a>
       </div>
     </section>

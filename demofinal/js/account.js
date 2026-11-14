@@ -10,6 +10,11 @@
     'checkout-return', 'visits', 'visits-list', 'visits-notice', 'visits-retry'
   ];
   const ui = Object.fromEntries(ids.map(id => [id, document.getElementById('account-' + id)]));
+  if (location.protocol === 'file:') {
+    ui.error.textContent = 'Чтобы войти, запустите start-local.cmd в папке проекта. Он откроет сайт через локальный сервер.';
+    return;
+  }
+
   const shell = document.querySelector('.account-shell');
   const amount = new Intl.NumberFormat('ru-RU');
   const query = new URL(location.href).searchParams;
@@ -55,7 +60,7 @@
   const visitAttemptsKey = 'pixel-visit-payment-request-v1';
   const guestProof = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
   const visitId = /^[a-f0-9]{32}$/;
-  const visits = {entries: [], selected: null, loading: null};
+  const visits = {entries: [], selected: null, editing: null, loading: null};
 
   async function api(path, data, accountUid) {
     const options = {
@@ -98,8 +103,8 @@
     ui.logout.disabled = busy || wallet.busy;
     ui.retry.disabled = busy;
     ui['topup-toggle'].disabled = ui['topup-submit'].disabled = busy || wallet.busy;
-    for (const button of ui['visits-list'].querySelectorAll('button')) {
-      button.disabled = busy || wallet.busy || !!visits.loading;
+    for (const control of ui['visits-list'].querySelectorAll('button, input, select')) {
+      control.disabled = busy || wallet.busy || !!visits.loading;
     }
     ui['visits-retry'].disabled = busy || wallet.busy || !!visits.loading;
   }
@@ -208,7 +213,7 @@
     setWalletNotice('');
     setTopupOpen(false);
     walletMessage('topup-status', '');
-    Object.assign(visits, {entries: [], selected: null, loading: null});
+    Object.assign(visits, {entries: [], selected: null, editing: null, loading: null});
     ui['visits-list'].replaceChildren();
     ui['visits'].hidden = ui['visits-retry'].hidden = true;
     walletMessage('visits-notice', '');
@@ -434,6 +439,28 @@
     return button;
   }
 
+  function createVisitEditor(visit) {
+    const form = document.getElementById('account-visit-editor').content.firstElementChild.cloneNode(true);
+    form.dataset.visit = visit.id;
+    form.setAttribute('aria-describedby', 'account-visits-notice');
+    const draft = visits.editing;
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Almaty', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date());
+    const dateParts = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    form.elements.date.min = dateParts.year + '-' + dateParts.month + '-' + dateParts.day;
+    const [prefix, capacity] = {standard: ['pc', 20], duo: ['duo', 2], vip: ['vip', 5]}[visit.plan.room];
+    form.elements.seat.add(new Option('Без предпочтений', ''));
+    for (let number = 1; number <= capacity; number += 1) {
+      const padded = String(number).padStart(2, '0');
+      form.elements.seat.add(new Option(visitRooms[visit.plan.room] + ' · ПК ' + padded, prefix + '-' + padded));
+    }
+    for (const name of ['date', 'time', 'seat']) form.elements[name].value = draft[name];
+    form.querySelector('[data-paid-note]').hidden = visit.kind !== 'order';
+    form.querySelector('[data-action="close-edit"]').dataset.visit = visit.id;
+    return form;
+  }
+
   function renderVisit(visit) {
     const {plan} = visit;
     const date = visitDate.format(new Date(plan.date + 'T00:00:00Z'));
@@ -448,6 +475,12 @@
     details.className = 'account-visit-details';
     details.textContent = visitRooms[plan.room] + ' · ' + plan.guests + ' ПК';
     summary.append(title, details);
+    if (plan.seat) {
+      const seat = document.createElement('p');
+      seat.className = 'account-visit-details';
+      seat.textContent = visitRooms[plan.room] + ' · ПК ' + plan.seat.split('-').pop() + ' · пожелание';
+      summary.append(seat);
+    }
     row.append(summary);
 
     if (visits.selected === visit.id) {
@@ -464,11 +497,18 @@
       actions.append(createVisitAction(visit, 'Сохранить запись', 'back'), confirm);
       confirmation.append(note, actions);
       row.append(confirmation);
+    } else if (visits.editing?.id === visit.id) {
+      row.append(createVisitEditor(visit));
     } else {
+      const actions = document.createElement('div');
+      actions.className = 'account-visit-actions account-visit-row-actions';
+      const edit = createVisitAction(visit, 'Изменить бронь', 'edit');
+      edit.setAttribute('aria-expanded', 'false');
       const button = createVisitAction(visit, 'Отменить запись', 'select');
       button.classList.add('account-visit-cancel');
       button.setAttribute('aria-label', 'Отменить запись ' + label);
-      row.append(button);
+      actions.append(edit, button);
+      row.append(actions);
     }
     return row;
   }
@@ -500,12 +540,14 @@
       if (!current()) return;
       visits.entries = entries;
       if (!entries.some(visit => visit.id === visits.selected)) visits.selected = null;
+      visits.editing = null;
       if (claimFailed) visitNotice('Не удалось загрузить гостевую бронь.', 'error', true);
       else if (ui['visits-notice'].dataset.state === 'error') visitNotice('');
     } catch (error) {
       if (!current()) return;
       visits.entries = [];
       visits.selected = null;
+      visits.editing = null;
       if (error.status === 404) visitNotice('');
       else visitNotice('Не удалось загрузить визиты.', 'error', true);
     } finally {
@@ -535,6 +577,40 @@
     if (wallet.uid === uid) {
       renderVisits(succeeded ? '[data-action="select"]' : '[data-action="confirm"]');
       if (succeeded) void loadWallet(uid);
+    }
+  }
+
+  async function updateVisit(visit, form) {
+    if (visits.loading || wallet.busy || busy || !form.reportValidity()) return;
+    const uid = wallet.uid;
+    const payload = {expectedPlan: visit.plan};
+    for (const name of ['date', 'time', 'seat']) payload[name] = form.elements[name].value;
+    let failure;
+    const succeeded = await walletAction('visits-notice', 'Сохраняем изменения…', 'Не удалось изменить бронь.', async () => {
+      let result;
+      try {
+        result = await api('visit-checkout/visits/' + visit.kind + '/' + visit.id + '/update', payload, uid);
+      } catch (error) {
+        failure = error;
+        throw error;
+      }
+      if (!isActiveVisit(result) || result.id !== visit.id || result.kind !== visit.kind || !Number.isSafeInteger(result.balance)) {
+        throw new Error('Invalid visit update');
+      }
+      if (wallet.uid !== uid) return;
+      wallet.revision += 1;
+      showBalance(result.balance);
+      visits.entries = visits.entries.map(entry => entry.id === visit.id ? result : entry)
+        .sort((a, b) => (a.plan.date + a.plan.time).localeCompare(b.plan.date + b.plan.time));
+      visits.editing = null;
+      visitNotice(result.amount === visit.amount ? 'Бронь изменена.'
+        : 'Бронь изменена. Новая стоимость: ' + formatMoney(result.amount) + '.', 'success');
+    });
+    if (wallet.uid !== uid) return;
+    if (succeeded) renderVisits('[data-action="edit"][data-visit="' + visit.id + '"]');
+    else {
+      ui['visits-retry'].hidden = !['visit_changed', 'visit_cancelled', 'visit_expired'].includes(failure?.code);
+      ui['visits-notice'].focus();
     }
   }
 
@@ -699,16 +775,42 @@
   ui['wallet-retry'].addEventListener('click', () => loadWallet(wallet.uid));
   ui['visits-retry'].addEventListener('click', () => loadVisits(wallet.uid));
 
+  ui['visits-list'].addEventListener('input', event => {
+    if (event.target.closest('.account-visit-editor') && visits.editing) {
+      visits.editing[event.target.name] = event.target.value;
+    }
+  });
+  ui['visits-list'].addEventListener('submit', event => {
+    const form = event.target.closest('.account-visit-editor');
+    if (!form) return;
+    event.preventDefault();
+    const visit = visits.entries.find(entry => entry.id === form.dataset.visit);
+    if (visit) void updateVisit(visit, form);
+  });
   ui['visits-list'].addEventListener('click', event => {
     const button = event.target.closest('button[data-visit]');
     if (!button || busy || wallet.busy || visits.loading) return;
     const visit = visits.entries.find(entry => entry.id === button.dataset.visit);
     if (!visit) return;
+    if (button.dataset.action === 'edit') {
+      visits.selected = null;
+      visits.editing = {id: visit.id, date: visit.plan.date, time: visit.plan.time, seat: visit.plan.seat || ''};
+      visitNotice('');
+      renderVisits('.account-visit-editor input[name="date"]');
+      return;
+    }
+    if (button.dataset.action === 'close-edit') {
+      visits.editing = null;
+      visitNotice('');
+      renderVisits('[data-action="edit"][data-visit="' + visit.id + '"]');
+      return;
+    }
     if (button.dataset.action === 'confirm') {
       void cancelVisit(visit);
       return;
     }
     const selecting = button.dataset.action === 'select';
+    visits.editing = null;
     visits.selected = selecting ? visit.id : null;
     renderVisits('[data-action="' + (selecting ? 'back' : 'select') + '"][data-visit="' + visit.id + '"]');
   });

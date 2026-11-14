@@ -4,8 +4,6 @@ $(function () {
   const hero = $('.portal-hero')[0];
   const canvas = $('#portal-canvas')[0];
   const visual = $('.portal-visual')[0];
-  const controls = $('.portal-motion-controls')[0];
-  const motionButton = $('#portal-motion')[0];
   if (!hero || !canvas || !visual) return;
   const reducedQuery = matchMedia('(prefers-reduced-motion: reduce)');
   const mobileQuery = matchMedia('(max-width: 767px)');
@@ -45,14 +43,9 @@ $(function () {
     const dot = a => a.reduce((sum, value, index) => sum + value * eye[index], 0);
     return new Float32Array([x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0, -dot(x), -dot(y), -dot(z), 1]);
   }
-  function showControls(show) {
-    $(controls).removeAttr('hidden');
-    $(controls).toggleClass('d-none', !show);
-  }
   function fallback() {
     $(hero).removeClass('scene-ready');
     hero.dataset.renderer = 'fallback';
-    showControls(false);
   }
   const loadImage = url => new Promise((resolve, reject) => {
     const image = new Image(); $(image).on('load', () => resolve(image)).on('error', reject); image.src = url;
@@ -60,7 +53,7 @@ $(function () {
   let gl = null, resources = null, assets = null;
   let materialRevision = 0, loadingVariant = null;
   let request = 0, previousTime = 0, activeTime = 0, zoom = 0, zoomTarget = 0;
-  let paused = false, reduced = reducedQuery.matches, visible = true, contextLost = false, disposed = false;
+  let reduced = reducedQuery.matches, visible = true, contextLost = false, disposed = false;
   let qualityLowered = false, samples = [], width = 1, height = 1;
   const pointer = {x: 0, y: 0}, pointerTarget = {x: 0, y: 0};
   function stop() { cancelAnimationFrame(request); request = 0; previousTime = 0; }
@@ -115,7 +108,7 @@ $(function () {
         const previous = resources.maps[index], next = texture(images[index]);
         resources.maps[index] = next; resources.rings[index].texture = next; gl.deleteTexture(previous);
       }
-      draw(0); if (!paused && !reduced) wake();
+      draw(0); wake();
     }).catch(() => { if (revision === materialRevision) loadingVariant = null; });
   }
   function release() {
@@ -211,7 +204,7 @@ $(function () {
     const smooth = 1 - Math.exp(-dt * 5.5);
     pointer.x += (pointerTarget.x - pointer.x) * smooth; pointer.y += (pointerTarget.y - pointer.y) * smooth;
     zoom += (zoomTarget - zoom) * smooth;
-    const moving = !reduced && !paused;
+    const moving = !reduced;
     const px = moving && !mobile() ? pointer.x : 0, py = moving && !mobile() ? pointer.y : 0;
     const scale = mobile() ? .72 : .88;
     const halfWidth = Math.tan(38 * Math.PI / 360) * 11.8 * width / height;
@@ -242,9 +235,9 @@ $(function () {
     request = 0;
     if (!visible || document.hidden || contextLost || disposed) return;
     const elapsed = previousTime ? (time - previousTime) / 1000 : 1 / 60;
-    if (lite() && elapsed < .031 && !paused && !reduced) { request = requestAnimationFrame(frame); return; }
+    if (lite() && elapsed < .031 && !reduced) { request = requestAnimationFrame(frame); return; }
     previousTime = time; const dt = Math.min(elapsed, .08);
-    if (!paused && !reduced) activeTime += dt;
+    if (!reduced) activeTime += dt;
     draw(dt);
     if (!lite() && !qualityLowered && activeTime > 2 && activeTime < 7) {
       samples.push(elapsed);
@@ -253,19 +246,18 @@ $(function () {
         samples = [];
       }
     }
-    if (!paused && !reduced) wake();
+    wake();
   }
-  function wake() { if (!request && resources && visible && !paused && !reduced && !document.hidden && !contextLost && !disposed) request = requestAnimationFrame(frame); }
+  function wake() { if (!request && resources && visible && !reduced && !document.hidden && !contextLost && !disposed) request = requestAnimationFrame(frame); }
   function resize() {
     if (!resources || contextLost) return;
     const rect = visual.getBoundingClientRect(); width = Math.max(1, rect.width); height = Math.max(1, rect.height);
     const ratio = Math.min(devicePixelRatio || 1, lite() || qualityLowered ? 1.25 : 1.6);
     canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio);
     hero.dataset.quality = lite() || qualityLowered ? 'light' : 'cinematic';
-    draw(.05); updateMaterials(); if (!paused && !reduced) wake();
+    draw(.05); updateMaterials(); wake();
   }
   function onScroll() {
-    if (paused) return;
     const rect = hero.getBoundingClientRect(); zoomTarget = reduced ? 0 : clamp(-rect.top / (rect.height * .85), 0, 1); wake();
   }
   async function start() {
@@ -280,10 +272,10 @@ $(function () {
     assets = {scene, images, variant: variant.id};
     gl = canvas.getContext('webgl', {alpha: true, antialias: true, premultipliedAlpha: true, powerPreference: 'low-power'});
     if (!gl) throw new Error('WebGL unavailable');
-    initialize(); resize(); $(hero).addClass('scene-ready'); showControls(true); onScroll();
+    initialize(); resize(); $(hero).addClass('scene-ready'); onScroll();
   }
   $(hero).on('pointermove', event => {
-    if (!finePointer.matches || lite() || paused || reduced) return;
+    if (!finePointer.matches || lite() || reduced) return;
     const rect = hero.getBoundingClientRect(); pointerTarget.x = clamp((event.clientX - rect.left) / rect.width * 2 - 1, -1, 1);
     pointerTarget.y = clamp((event.clientY - rect.top) / rect.height * 2 - 1, -1, 1); wake();
   });
@@ -292,24 +284,18 @@ $(function () {
   const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; if (visible) wake(); else stop(); }); observer.observe(hero);
   const resizeObserver = new ResizeObserver(resize); resizeObserver.observe(visual);
   $(document).on('visibilitychange', () => { if (document.hidden) stop(); else wake(); });
-  $(reducedQuery).on('change', () => { reduced = reducedQuery.matches; stop(); zoomTarget = 0; pointerTarget.x = 0; pointerTarget.y = 0; draw(.05); if (!reduced && !paused) wake(); });
+  $(reducedQuery).on('change', () => { reduced = reducedQuery.matches; stop(); zoomTarget = 0; pointerTarget.x = 0; pointerTarget.y = 0; draw(.05); wake(); });
   $(mobileQuery).on('change', resize);
-  $(motionButton).on('click', () => {
-    paused = !paused; $(motionButton).attr('aria-pressed', String(paused));
-    $(motionButton).attr('aria-label', paused ? 'Возобновить движение сцены' : 'Приостановить движение сцены');
-    $(motionButton).find('span').text(paused ? 'Продолжить' : 'Пауза');
-    if (paused) stop(); else { previousTime = 0; onScroll(); wake(); }
-  });
   $(canvas).on('webglcontextlost', event => { event.preventDefault(); contextLost = true; stop(); resources = null; fallback(); });
   $(canvas).on('webglcontextrestored', () => {
     contextLost = false;
-    try { initialize(); resize(); $(hero).addClass('scene-ready'); showControls(true); if (!paused && !reduced) wake(); }
+    try { initialize(); resize(); $(hero).addClass('scene-ready'); }
     catch { release(); fallback(); }
   });
   $(window).on('pagehide', event => {
     stop();
     if (!event.originalEvent.persisted) { disposed = true; observer.disconnect(); resizeObserver.disconnect(); release(); }
   });
-  $(window).on('pageshow', () => { draw(0); if (!paused && !reduced) wake(); });
+  $(window).on('pageshow', () => { draw(0); wake(); });
   start().catch(() => { stop(); release(); fallback(); });
 });

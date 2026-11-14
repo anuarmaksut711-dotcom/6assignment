@@ -218,6 +218,92 @@ class VisitCheckoutTests(unittest.TestCase):
         self.assertEqual(self.request('/orders/' + card['id'], cookie=self.cookie), (200, {**card, 'status': 'cancelled'}))
         self.assert_error(self.request(confirm, {}, cookie=self.cookie), 409, 'visit_cancelled')
 
+    def update_payload(self, visit, **changes):
+        return {'expectedPlan': visit['plan'], **{key: visit['plan'].get(key, '') for key in ('date', 'time', 'seat')},
+                **changes}
+
+    def test_edit_reservation_persists_same_id_and_checks_owner_origin_and_inputs(self):
+        _, visit = self.request('/reservations', {'plan': self.order()['plan'], 'requestId': str(uuid4())},
+                                cookie=self.cookie)
+        path = '/visits/reservation/' + visit['id'] + '/update'
+        date = (datetime.now(ASTANA) + timedelta(days=3)).date().isoformat()
+        payload = self.update_payload(visit, date=date, time='16:30', seat='pc-05')
+        self.assert_error(self.request(path, payload), 401, 'sign_in')
+        self.assert_error(self.request(path, payload, cookie=self.other_cookie), 404, 'reservation_not_found')
+        self.assert_error(self.request(path, payload, cookie=self.cookie, origin='https://elsewhere.example'), 403, 'auth_origin')
+        self.assert_error(self.request(path, payload, cookie=self.cookie, account='different-account'), 409, 'account_changed')
+        for changes in ({'date': '2020-01-01'}, {'time': '25:00'}, {'date': '2027-02-30'}, {'seat': 'vip-01'}):
+            self.assert_error(self.request(path, {**payload, **changes}, cookie=self.cookie), 422, 'validation')
+        self.assert_error(self.request(path, {**payload, 'room': 'vip'}, cookie=self.cookie), 400, 'invalid')
+        status, updated = self.request(path, payload, cookie=self.cookie)
+        self.assertEqual(status, 200)
+        self.assertEqual((updated['id'], updated['plan']['date'], updated['plan']['time'], updated['plan']['seat']),
+                         (visit['id'], date, '16:30', 'pc-05'))
+        self.assertEqual(updated['amount'], visit['amount'])
+        self.assertEqual(updated['plan']['duration'], visit['plan']['duration'])
+        self.assertEqual(self.request(path, payload, cookie=self.cookie), (200, updated))
+        self.assertEqual(self.request('/reservations/' + visit['id'])[1]['plan'], updated['plan'])
+        listed = self.request('/visits', cookie=self.cookie)[1]['visits']
+        self.assertEqual(len(listed), 1)
+        self.assertEqual(listed[0]['plan'], updated['plan'])
+        self.assert_error(self.request(path, {**payload, 'seat': 'pc-06'}, cookie=self.cookie), 409, 'visit_changed')
+        self.assertEqual(self.request(path, self.update_payload(updated, seat=''), cookie=self.cookie)[1]['plan']['seat'], '')
+        self.request(path.replace('/update', '/cancel'), {}, cookie=self.cookie)
+        self.assert_error(self.request(path, payload, cookie=self.cookie), 409, 'visit_cancelled')
+
+    def test_edit_paid_visits_keeps_balance_and_blocks_started_or_pending(self):
+        self.fund(6000)
+        for index, method in enumerate(('balance', 'card')):
+            _, visit = self.start(self.order(method, request_id=f'edit-paid-visit-000{index}'))
+            path = '/visits/order/' + visit['id'] + '/update'
+            payload = self.update_payload(visit, time='18:00', seat='pc-12')
+            if method == 'card':
+                self.assert_error(self.request(path, payload, cookie=self.cookie), 409, 'visit_not_confirmed')
+                self.request('/orders/' + visit['id'] + '/confirm', {}, cookie=self.cookie)
+            before = self.server.accounts.wallet_balance(self.owner['uid'])
+            status, updated = self.request(path, payload, cookie=self.cookie)
+            self.assertEqual((status, updated['status'], updated['method']), (200, 'paid', method))
+            self.assertEqual(updated['balance'], before)
+            self.assertEqual(self.request('/orders/' + visit['id'], cookie=self.cookie)[1]['plan'], updated['plan'])
+            with closing(self.server.accounts._connect()) as db, db:
+                db.execute('UPDATE visit_checkout_orders SET starts_at = 1 WHERE id = ?', (visit['id'],))
+            self.assert_error(self.request(path, self.update_payload(updated, time='19:00'), cookie=self.cookie), 409, 'visit_expired')
+        self.assertEqual(self.server.accounts.wallet_balance(self.owner['uid']), 4200)
+
+    def test_edit_package_requotes_reservation_and_does_not_change_paid_price(self):
+        # A night package shifted partly outside its window gains extra charges.
+        data = self.order()
+        data['plan'].update({'duration': '2', 'time': '22:00', 'mode': 'packages',
+                             'packageId': 'standard-night', 'pricingPolicy': 'package-estimate-v1',
+                             'packages': [{'id': 'standard-night', 'quantity': 1}]})
+        checked, original_amount, _ = quote_visit_checkout(data['plan'])
+        data['expectedAmount'] = original_amount
+        _, reservation = self.request('/reservations', {'plan': checked, 'requestId': str(uuid4())}, cookie=self.cookie)
+        path = '/visits/reservation/' + reservation['id'] + '/update'
+        status, changed = self.request(path, self.update_payload(reservation, time='21:00'), cookie=self.cookie)
+        self.assertEqual(status, 200)
+        self.assertGreater(changed['amount'], original_amount)
+        _, order = self.start(data)
+        self.request('/orders/' + order['id'] + '/confirm', {}, cookie=self.cookie)
+        path = '/visits/order/' + order['id'] + '/update'
+        self.assert_error(self.request(path, self.update_payload(order, time='21:00'), cookie=self.cookie), 409, 'price_changed')
+        self.assertEqual(self.request('/orders/' + order['id'], cookie=self.cookie)[1]['plan'], order['plan'])
+
+    def test_concurrent_edits_do_not_overwrite_and_cancel_refunds_edited_order_once(self):
+        self.fund(3000)
+        _, order = self.start(self.order('balance'))
+        path = '/visits/order/' + order['id'] + '/update'
+        payloads = [self.update_payload(order, seat=seat) for seat in ('pc-03', 'pc-04')]
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            responses = list(pool.map(lambda payload: self.request(path, payload, cookie=self.cookie), payloads))
+        self.assertEqual(sorted(status for status, _ in responses), [200, 409])
+        self.assert_error(next(response for response in responses if response[0] == 409), 409, 'visit_changed')
+        self.assertEqual(self.server.accounts.wallet_balance(self.owner['uid']), 1200)
+        cancel_path = path.replace('/update', '/cancel')
+        for _ in range(2):
+            self.assertEqual(self.request(cancel_path, {}, cookie=self.cookie)[1]['balance'], 3000)
+        self.assertEqual(self.server.accounts.wallet_balance(self.owner['uid']), 3000)
+
     def test_legacy_reservation_can_be_claimed_and_cancelled(self):
         data = {'plan': self.order()['plan'], 'requestId': str(uuid4())}
         _, reservation = self.request('/reservations', data)

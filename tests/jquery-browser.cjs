@@ -105,17 +105,15 @@ const tomorrow = new Date(Date.now() + 86400000 + 5 * 3600000).toISOString().sli
     console.log('PASS: per-field errors/correction, email/phone/trim, checkbox prop vs attr, successful response, reset, privacy, new visit and mobile layout.');
 
     await open('booking.html?mode=packages&room=vip');
-    await page.waitForFunction(() => $('[data-quantity="vip-3-hours:1"]').length > 0);
-    await page.locator('#package-picker > summary').click();
-    for (let i = 0; i < 3; i += 1) await page.locator('[data-quantity="vip-3-hours:1"]').click();
-    assert.equal(await page.evaluate(() => PixelCart.getSnapshot().items.find(item => item.id === 'vip-3-hours').quantity), 3);
-    assert.equal(await page.locator('.package-option[data-package-id="vip-3-hours"] output').textContent(), '3');
+    await page.locator('#booking-date').fill(tomorrow);
+    await page.locator('#booking-time').fill('22:30');
+    await page.locator('#booking-package').selectOption('vip-night');
+    assert.equal((await page.locator('#booking-total').textContent()).replace(/\D/g, ''), '5000');
     await page.locator('label[for="visit-room-duo"]').click();
-    await page.locator('[data-quantity="duo-3-hours:1"]').click();
-    await page.locator('[data-quantity="duo-3-hours:1"]').click();
-    assert.equal(await page.locator('[data-quantity="duo-3-hours:1"]').isDisabled(), true, 'capacity preserved');
-    assert.equal(await page.locator('.package-option[data-package-id="duo-3-hours"] output').textContent(), '2');
-    console.log('PASS: delegated buttons survive repeated regeneration/room changes; cart capacities preserved.');
+    assert.equal(await page.locator('#booking-package').inputValue(), 'duo-night');
+    assert.equal((await page.locator('#booking-total').textContent()).replace(/\D/g, ''), '4000');
+    assert.equal(await page.locator('#booking-guests').getAttribute('max'), '2');
+    console.log('PASS: tariff selection, estimate and capacity follow the selected room.');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

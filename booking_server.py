@@ -623,7 +623,10 @@ class Handler(SimpleHTTPRequestHandler):
             cancelling = self.command == 'POST' and re.fullmatch(
                 r'/api/visit-checkout/visits/(reservation|order)/([0-9a-f]{32})/cancel', path
             )
-            if not (starting or reading or confirming or listing or claiming or cancelling):
+            updating = self.command == 'POST' and re.fullmatch(
+                r'/api/visit-checkout/visits/(reservation|order)/([0-9a-f]{32})/update', path
+            )
+            if not (starting or reading or confirming or listing or claiming or cancelling or updating):
                 raise AccountError(404, 'not_found', 'Страница не найдена.')
             uid = self.checkout_account()
             if listing:
@@ -639,6 +642,8 @@ class Handler(SimpleHTTPRequestHandler):
                 self.json_response(201, checkout.start_order(uid, payload))
             elif claiming:
                 self.json_response(200, checkout.claim_reservation(uid, payload))
+            elif updating:
+                self.json_response(200, checkout.update_visit(uid, updating[1], updating[2], payload))
             elif not payload and cancelling:
                 self.json_response(200, checkout.cancel_visit(uid, cancelling[1], cancelling[2]))
             elif not payload and confirming:

@@ -10,18 +10,9 @@ $(function () {
     $(element).removeAttr('hidden').toggleClass('d-none', !visible);
     return visible;
   }
-  function money(amount) { return `${new Intl.NumberFormat('ru-RU').format(amount)} ₸`; }
   function reference() { return Math.floor(Math.random() * 0x100000000).toString(16).padStart(8, '0').toUpperCase(); }
-  window.PixelMain = Object.freeze({node, show, money, reference});
+  window.PixelMain = Object.freeze({node, show, reference});
   $('[hidden]').removeAttr('hidden').addClass('d-none');
-  function update() {
-    const state = window.PixelCart?.getSnapshot();
-    const links = $('nav').find('a[href="booking.html"]');
-    if (state?.count) links.attr('title', `Выбрано пакетов: ${state.count}, ${money(state.total)}`);
-    else links.removeAttr('title');
-  }
-  $(window).on('pixel:cartchange', update);
-  update();
 
   const roomsIntro = $('.rooms-intro');
   if (roomsIntro.length) {
@@ -59,9 +50,7 @@ $(function () {
   bookingSteps.find('ol > li').last().contents().filter(function () {
     return this.nodeType === Node.TEXT_NODE;
   }).last().replaceWith(' Номер ПК, игра и места рядом необязательны. Укажите имя и телефон, затем проверьте план.');
-  questions.children('summary').filter(function () {
-    return $(this).text() === 'Когда бронь подтверждена?';
-  }).each(function () {
+  $('#help-confirmation > summary').each(function () {
     const summary = $(this);
     const paragraph = summary.siblings('p').first();
     const phone = paragraph.find('a[href^="tel:"]').detach();
@@ -123,12 +112,12 @@ $(function () {
   function searchable(text) {
     return text.toLocaleLowerCase('ru-RU').replaceAll('ё', 'е').trim();
   }
-  const searchIndex = new Map(questions.toArray().map(question => [question, searchable($(question).text())]));
   function filterQuestions() {
     const terms = searchable(search.val()).split(/\s+/).filter(Boolean);
     let visible = 0;
     questions.each(function () {
-      if (show(this, terms.every(term => searchIndex.get(this).includes(term)))) visible += 1;
+      const text = searchable($(this).text());
+      if (show(this, terms.every(term => text.includes(term)))) visible += 1;
     });
     reset.prop('disabled', !search.val());
     status.text(terms.length ? `Найдено: ${visible} из ${questions.length}` : '');
@@ -155,6 +144,7 @@ $(function () {
     filterQuestions();
   });
   reset.on('click', clearSearch);
+  document.addEventListener('pixel-language-change', filterQuestions);
 
   function revealLinkedAnswer() {
     const target = questions.filter(function () {

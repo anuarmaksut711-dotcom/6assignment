@@ -16,7 +16,7 @@
 .checkout-summary dd { margin: 4px 0 0; font-size: 1.9rem; font-weight: 750; font-variant-numeric: tabular-nums; }
 .checkout-visit { margin: 8px 0 0; color: var(--visit-muted); font-size: .875rem; }
 .checkout-notice { color: var(--visit-muted); font-size: .875rem; line-height: 1.5; }
-.checkout-error { color: #9c2430; }
+.checkout-error { color: var(--visit-error); }
 .checkout-notice:empty { display: none; }
 .checkout-action { width: 100%; min-height: 46px; margin-top: 14px; border-radius: 9px; font-weight: 750; }
 .checkout-shell :is(.checkout-action, .visit-link):focus-visible { outline: 2px solid var(--visit-accent); outline-offset: 3px; }
@@ -25,7 +25,7 @@
 .checkout-card-number { grid-column: 1 / -1; }
 .checkout-card-fields label { display: block; margin-bottom: 4px; font-size: .875rem; font-weight: 700; }
 .checkout-card-fields .form-control { min-width: 0; min-height: 44px; font-variant-numeric: tabular-nums; }
-.checkout-card-fields .form-control[aria-invalid="true"] { border-color: #9c2430; }
+.checkout-card-fields .form-control[aria-invalid="true"] { border-color: var(--visit-error); }
 
 @media (max-width: 575px) {
   .pixel-booking-page:has(.checkout-shell) .premium-header { height: 60px; padding-top: 0; align-content: center; }

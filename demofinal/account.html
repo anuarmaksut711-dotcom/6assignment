@@ -9,11 +9,13 @@
   <link rel="stylesheet" href="assets/vendor/bootstrap.min.css">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/Anuar.css">
-  <link rel="stylesheet" href="css/premium.css?v=12">
+  <link rel="stylesheet" href="css/premium.css?v=14">
   <link rel="stylesheet" href="css/portal.css?v=5">
-  <link rel="stylesheet" href="css/booking.css?v=3">
-  <link rel="stylesheet" href="css/account.css?v=7">
-  <script src="js/account.js?v=11" defer></script>
+  <link rel="stylesheet" href="css/booking.css?v=7">
+  <link rel="stylesheet" href="css/account.css?v=9">
+  <script src="js/account.js?v=13" defer></script>
+  <link rel="stylesheet" href="css/language.css">
+  <script src="js/language.js?v=2" defer></script>
 </head>
 <body class="pixel-booking-page pixel-account-page">
   <a class="visually-hidden-focusable pixel-skip" href="#main-content">Перейти к содержимому</a>
@@ -126,11 +128,11 @@
           <dl class="account-details">
             <div id="account-name-row" hidden>
               <dt>Имя</dt>
-              <dd id="account-name"></dd>
+              <dd id="account-name" translate="no"></dd>
             </div>
             <div id="account-email-row" hidden>
               <dt>Почта</dt>
-              <dd id="account-email"></dd>
+              <dd id="account-email" translate="no"></dd>
             </div>
           </dl>
           <button id="account-logout" class="visit-link" type="button">Выйти</button>
@@ -139,5 +141,24 @@
       <noscript><p class="account-notice">Включите JavaScript, чтобы войти.</p></noscript>
     </div>
   </main>
+  <template id="account-visit-editor">
+    <form class="account-visit-editor">
+      <fieldset>
+        <legend>Изменить бронь</legend>
+        <p class="account-hint">Время Астаны</p>
+        <div class="account-visit-fields">
+          <label>Дата<input name="date" class="form-control" type="date" required></label>
+          <label>Начало<input name="time" class="form-control" type="time" step="60" required></label>
+          <label>Пожелание по ПК<select name="seat" class="form-select"></select></label>
+        </div>
+        <p class="account-hint">Свободные места и посадку подтвердит клуб.</p>
+        <p class="account-hint" data-paid-note hidden>Для оплаченного визита доступен перенос с прежней стоимостью.</p>
+        <div class="account-visit-actions">
+          <button class="btn btn-primary" type="submit">Сохранить изменения</button>
+          <button class="visit-link" type="button" data-action="close-edit">Не менять</button>
+        </div>
+      </fieldset>
+    </form>
+  </template>
 </body>
 </html>

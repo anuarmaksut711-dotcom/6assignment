@@ -27,6 +27,7 @@ a:hover {color:#fff3d9;}
 :focus-visible,.btn:focus-visible,.form-control:focus-visible,.form-select:focus-visible {
   outline:2px solid var(--pixel-focus);outline-offset:4px;box-shadow:none;
 }
+:is(input,textarea).form-control:focus-visible {outline:none;}
 .btn {border-radius:6px;min-height:48px;padding:.75rem 1.2rem;font-size:1rem;font-weight:600;transition:background-color .18s ease,color .18s ease;}
 .btn-primary {--bs-btn-bg:#e1d0ad;--bs-btn-border-color:#e1d0ad;--bs-btn-color:#21221d;--bs-btn-hover-bg:#f5e6c9;--bs-btn-hover-border-color:#f5e6c9;--bs-btn-hover-color:#171816;--bs-btn-active-bg:#c6b48f;--bs-btn-active-border-color:#c6b48f;--bs-btn-active-color:#171816;}
 .btn-outline-light {--bs-btn-color:#f2eee5;--bs-btn-border-color:#77796c;--bs-btn-hover-bg:#f2eee5;--bs-btn-hover-color:#171816;--bs-btn-hover-border-color:#f2eee5;}

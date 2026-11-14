@@ -17,7 +17,7 @@ $(async function () {
 
   const ids = ['room', 'guests', 'duration', 'date', 'time', 'nearby', 'seat', 'game', 'name', 'phone', 'email', 'package',
     'submit', 'reset', 'errors', 'status', 'total', 'price-note',
-    'result', 'result-title', 'cart-items', 'cart-note', 'mode', 'success', 'end'];
+    'result', 'result-title', 'success', 'end'];
   const ui = Object.fromEntries(ids.map(id => [id, $('#' + `booking-${id}`)]));
   if (ids.some(id => !ui[id].length)) return;
 
@@ -56,7 +56,7 @@ $(async function () {
   });
   const labels = new Map([
     [ui.room, 'Зал'], [ui.guests, 'Число игроков'], [ui.date, 'Дата'], [ui.time, 'Время'], [ui.duration, 'Длительность'],
-    [ui.mode, 'Тариф'], [ui.package, 'Пакет'], [ui.seat, 'Пожелание по ПК'], [ui.game, 'Игра'],
+    [ui.package, 'Тариф'], [ui.seat, 'Пожелание по ПК'], [ui.game, 'Игра'],
     [ui.name, 'Имя'], [ui.phone, 'Телефон'], [ui.email, 'E-mail']
   ]);
   labels.forEach((label, field) => {
@@ -97,7 +97,6 @@ $(async function () {
   }
   M.show($("#booking-room-native"), false);
   M.show(roomChoices, true);
-  let cart = { items: [], total: 0, count: 0 };
 
   function has(object, key) {
     return Object.prototype.hasOwnProperty.call(object, key);
@@ -121,6 +120,13 @@ $(async function () {
 
   function validTime(value) {
     return typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+  }
+
+  function parseStartTime(value) {
+    const parts = /^(\d{1,2}):?(\d{2})$/.exec(value.trim());
+    if (!parts) return '';
+    const time = `${parts[1].padStart(2, '0')}:${parts[2]}`;
+    return validTime(time) ? time : '';
   }
 
   function integer(value, minimum, maximum) {
@@ -189,10 +195,6 @@ $(async function () {
     M.show(ui.errors, true);
   }
 
-  function packageRooms() {
-    return [...new Set(cart.items.map(item => String(item.id || '').split('-')[0]))];
-  }
-
   // required/min/max/type stay as browser constraints. They are bypassable, so
   // booking_server.py must independently validate all fields and recompute prices.
   // Native Constraint Validation has no jQuery equivalent; [0] bridges only those APIs.
@@ -212,16 +214,11 @@ $(async function () {
     const now = clubNow();
     const room = has(rooms, ui.room.val()) ? rooms[ui.room.val()] : null;
     ui.room[0].setCustomValidity(room ? '' : 'Выберите Standard, Duo или VIP.');
-    const packageMode = ui.mode.val() === 'packages';
-    ui.mode[0].setCustomValidity(!['hourly','packages'].includes(ui.mode.val()) ? 'Выберите способ расчёта.'
-      : packageMode && (!window.PixelPackagePricing || !window.PixelCart?.getCatalog().length) ? 'Прайс не загрузился. Обновите страницу или выберите почасовой тариф.' : '');
-    ui.package.prop('disabled', !packageMode);
-    ui.package.prop('required', packageMode);
-    M.show($("#booking-package-wrap"), packageMode);
-    const selectedPackage = window.PixelCart?.getCatalog().find(item => item.id === ui.package.val());
+    const selectedId = ui.package.val();
+    const selectedPackage = window.PixelCart?.getCatalog().find(item => item.id === selectedId);
     $("#booking-package-condition").text(selectedPackage?.condition || '');
-    const quote = packageMode ? packageQuote() : null;
-    ui.package[0].setCustomValidity(packageMode && !quote?.ok ? quoteError(quote?.code) : '');
+    const quote = selectedId ? packageQuote() : null;
+    ui.package[0].setCustomValidity(selectedId && !quote?.ok ? quoteError(quote?.code) : '');
     roomChoices.find('input').each(function () {
       this.checked = this.value === ui.room.val();
     });
@@ -248,12 +245,12 @@ $(async function () {
     } else if (ui.date.val() && ui.date.val() < now.date) {
       ui.date[0].setCustomValidity('Выберите сегодняшнюю или будущую дату.');
     }
-    ui.time.prop('min', ui.date.val() === now.date ? now.time : '');
+    const timeInput = ui.time.val();
+    const time = parseStartTime(timeInput);
     ui.time[0].setCustomValidity('');
-    if (ui.time.val() && !validTime(ui.time.val())) {
+    if (timeInput && !time) {
       ui.time[0].setCustomValidity('Укажите время в формате часы:минуты.');
-    } else if (validDate(ui.date.val()) && validTime(ui.time.val())
-      && isPast(ui.date.val(), ui.time.val(), now)) {
+    } else if (time && validDate(ui.date.val()) && isPast(ui.date.val(), time, now)) {
       ui.time[0].setCustomValidity('Время начала уже прошло в Астане. Выберите будущие дату и время.');
     }
     ui.seat[0].setCustomValidity('');
@@ -287,32 +284,7 @@ $(async function () {
     return ({package:'Выберите пакет выбранного зала.', manual:'Студенческий тариф согласуется по телефону.',
       inputs:'Проверьте число игроков и длительность.', 'date-time':'Укажите дату и время для проверки интервала пакета.',
       weekday:'Этот пакет действует только по будням. Измените дату или тариф.',
-      window:'Визит не пересекается с интервалом пакета. Измените время или тариф.'})[code] || 'Пакетный расчёт недоступен. Выберите почасовой тариф.';
-  }
-
-  function timeAmount(minutes) {
-    return `${Math.floor(minutes / 60)} ч${minutes % 60 ? ` ${minutes % 60} мин` : ''}`;
-  }
-
-  function packageFormula(quote) {
-    return `Пакеты ${money.format(quote.packageTotal)} ₸ + доплата ${money.format(quote.extraTotal)} ₸ =`;
-  }
-
-  function renderPackageFacts(target, quote) {
-    const item = window.PixelCart.getCatalog().find(p => p.id === quote.packageId);
-    const facts = [
-      ['Пакет', `${item.title} · ${quote.quantity} ПК`],
-      ['Покрыто', `${timeAmount(quote.coveredMinutes)} на каждом ПК`],
-      ['Остаток', `${timeAmount(quote.unusedMinutes)} на каждом ПК`],
-      ['Почасовой визит', `${money.format(quote.hourlyTotal)} ₸ за всех`]
-    ];
-    target.empty();
-    for (const [label, value] of facts) {
-      const row = $("<div>");
-      const dt = $("<dt>"); dt.text(label);
-      const dd = $("<dd>"); dd.text(value);
-      row.append(dt, dd); target.append(row);
-    }
+      window:'Визит не пересекается с интервалом пакета. Измените время или тариф.'})[code] || 'Пакетный расчёт недоступен. Выберите расчёт по длительности.';
   }
 
   function endTime(plan) {
@@ -325,30 +297,19 @@ $(async function () {
   function renderEstimate() {
     const plan = collectPlan();
     const packages = plan.mode === 'packages';
+    const chosenPackage = packages && window.PixelCart?.getCatalog().find(item => item.id === plan.packageId);
     const hourly = hourlyEstimate({...plan, guests: Number(plan.guests), duration: Number(plan.duration)});
     const quote = packages ? packageQuote(plan) : null;
     const estimate = packages ? quote?.ok ? quote.total : null : hourly;
     const total = estimate === null ? '—' : `${money.format(estimate)} ₸`;
     if (ui.total.text() !== total) ui.total.text(total);
-    $("#booking-call-title").text(packages ? 'Предварительно' : 'Итого');
-    M.show($("#booking-packages-section"), packages && Boolean(quote?.ok));
-    const formula = $("#booking-package-formula");
-    M.show(formula, packages && Boolean(quote?.ok));
-    formula.text(quote?.ok ? packageFormula(quote) : '');
+    $("#booking-call-title").text(chosenPackage?.kind === 'window' ? 'Предварительно' : 'Итого');
     ui['price-note'].text(packages
-      ? quote?.ok ? 'Итог по пакету подтвердит клуб.' : quoteError(quote?.code)
+      ? quote?.ok ? `Пакет «${chosenPackage.title}»` : quoteError(quote?.code)
       : estimate === null ? 'Укажите число игроков и часов.' : '');
     const end = endTime(plan);
     ui.end.text(end ? `Окончание: ${end} · время Астаны` : '');
     M.show(ui.end, Boolean(end));
-    if (quote?.ok) {
-      renderPackageFacts(ui['cart-items'], quote);
-      ui['cart-note'].text(quote.extraHours
-        ? `Доплата за ${quote.extraHours} ч на каждом ПК.` : 'Весь визит покрыт пакетом.');
-      if (quote.assumedWindow) ui['cart-note'].text(ui['cart-note'].text() + ' Интервал ночного Duo принят по модели сайта: 22:00–08:00.');
-      $("#booking-package-math").text(`${money.format(quote.unitPrice)} ₸ × ${quote.quantity} ПК = ${money.format(quote.packageTotal)} ₸ за пакеты. Доплата: ${quote.extraHours} ч × ${money.format(rooms[ui.room.val()].hourly)} ₸ × ${quote.quantity} ПК = ${money.format(quote.extraTotal)} ₸.`);
-    }
-    const chosenPackage = packages && window.PixelCart?.getCatalog().find(item => item.id === plan.packageId);
     $("#booking-options-caption").text(chosenPackage?.title || games[plan.game] || '');
   }
 
@@ -369,15 +330,16 @@ $(async function () {
       const row = $("<div>");
       const dt = $("<dt>"); dt.text(name);
       const dd = $("<dd>"); dd.text(value);
+      if (name === 'Имя' || name === 'Телефон' || name === 'E-mail') dd.attr('translate', 'no');
       row.append(dt, dd); target.append(row);
     }
   }
 
-  function renderInlineErrors(includeEmpty) {
+  function renderInlineErrors(includeEmpty, editingField) {
     for (const [field] of labels) {
       const error = $('#' + `${field.attr('id')}-error`);
       if (!error.length) continue;
-      const invalid = field[0].willValidate && !field.prop('validity').valid &&
+      const invalid = field[0] !== editingField && field[0].willValidate && !field.prop('validity').valid &&
         (includeEmpty || validationAttempted || !!field.val());
       M.show(error, invalid);
       error.text(invalid ? field.prop('validationMessage') : '');
@@ -387,158 +349,28 @@ $(async function () {
     }
   }
 
-  // Array -> generated package cards: their markup exists only here, never in HTML.
-  function renderPackagePicker(snapshot) {
-    const target = $("#package-options");
+  function tariffClock(minutes) {
+    const hours = Math.floor(minutes / 60) % 24;
+    return `${String(hours).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+  }
+
+  function renderTariffOptions() {
+    const room = ui.room.val();
+    if (ui.package.attr('data-room') === room) return;
+
     const catalog = window.PixelCart?.getCatalog() || [];
-    if (ui.package.attr('data-room') !== ui.room.val()) {
-      const previous = (ui.package.val() || '').replace(/^[^-]+-/, `${ui.room.val()}-`);
-      ui.package.empty();
-      for (const item of catalog.filter(p => p.room === ui.room.val() && p.kind !== 'hourly')) {
-        const option = $("<option>"); option.val(item.id);
-        option.text(`${item.title} · ${money.format(item.price)} ₸ / ПК${item.manualOnly ? ' · по телефону' : ''}`);
-        option.prop('disabled', !!item.manualOnly); ui.package.append(option);
-      }
-      if (catalog.some(p => p.id === previous && !p.manualOnly)) ui.package.val(previous);
-      ui.package.attr('data-room', ui.room.val());
+    const previous = (ui.package.val() || '').replace(/^[^-]+-/, `${room}-`);
+    const options = catalog.filter(item => item.room === room && item.kind === 'window');
+    ui.package.find('option').slice(1).remove();
+    for (const item of options) {
+      const period = item.manualOnly ? '' : ` · ${tariffClock(item.start)}–${tariffClock(item.end)}`;
+      const option = $('<option>').val(item.id)
+        .text(`${item.title}${period} · ${money.format(item.price)} ₸ / ПК${item.manualOnly ? ' · по телефону' : ''}`)
+        .prop('disabled', !!item.manualOnly);
+      ui.package.append(option);
     }
-    const roomPackages = catalog.filter(item => item.room === ui.room.val());
-    target.empty();
-    M.show(target, roomPackages.length > 0);
-    for (const item of roomPackages) {
-      const quantity = snapshot?.items.find(p => p.id === item.id)?.quantity || 0;
-      if (item.id.endsWith('1-hour') && !quantity) continue;
-      const row = $("<div>"); row.addClass('package-option').attr('data-package-id', item.id);
-      const detail = $("<div>");
-      const title = $("<h3>"); title.text(item.title);
-      const price = $("<strong>"); price.text(`${money.format(item.price)} ₸ / пакет`);
-      const note = $("<p>"); note.text(item.condition);
-      detail.append(title, price, note);
-      if (item.id.endsWith('3-hours') || item.id.endsWith('5-hours')) {
-        const compare = $("<p>");
-        const hours = item.id.endsWith('3-hours') ? 3 : 5;
-        compare.text(`Для сравнения: ${hours} ч почасово — ${money.format(rooms[ui.room.val()].hourly * hours)} ₸ / ПК.`);
-        detail.append(compare);
-      }
-      if (quantity) {
-        const subtotal = $("<p>");
-        subtotal.text(`${quantity} × ${money.format(item.price)} ₸ = ${money.format(quantity * item.price)} ₸`);
-        detail.append(subtotal);
-      }
-      row.append(detail);
-      row.toggleClass('active', quantity > 0);
-      if (!item.manualOnly) row.append(packageCounter(item, quantity));
-      target.append(row);
-    }
-    $("#package-selection-status").text(!roomPackages.length
-      ? 'Прайс пакетов недоступен. Можно продолжить с почасовым тарифом.'
-      : cart.count
-      ? `В корзине: ${cart.count} пакетов · ${money.format(cart.total)} ₸. Для расчёта визита нажмите «В план» у нужного пакета.`
-      : 'Корзина пуста. Добавьте пакет кнопкой «+» или рассчитайте визит почасово.');
-    const otherRooms = packageRooms().filter(room => room !== ui.room.val() && has(rooms, room));
-    const otherPackages = $("#other-room-packages").empty();
-    if (otherRooms.length) {
-      const switches = M.node('div', '', 'd-flex flex-wrap gap-3');
-      for (const room of otherRooms) {
-        switches.append(M.node('button', `Переключиться на ${rooms[room].name}`, 'text-button')
-          .attr({type:'button', 'data-package-room':room}));
-      }
-      otherPackages.append(M.node('p', 'В корзине есть пакеты для других залов.', 'mb-1'), switches);
-    }
-    M.show(otherPackages, otherRooms.length > 0);
-    renderCartActions();
-  }
-
-  function packageCounter(item, quantity) {
-    const M = window.PixelMain;
-    const actions = M.node('div', '', 'd-flex flex-column gap-2');
-    const counter = M.node('div', '', 'package-counter');
-    for (const delta of [-1, 1]) {
-      const button = M.node('button', delta < 0 ? '−' : '+')
-        .attr({type: 'button', 'data-quantity': `${item.id}:${delta}`, 'data-delta': delta,
-          'aria-label': `${delta < 0 ? 'Уменьшить' : 'Добавить'}: ${item.name}`})
-        .prop('disabled', delta < 0 ? quantity === 0 : quantity >= rooms[item.room].capacity);
-      if (delta === 1) counter.append(M.node('output', String(quantity)));
-      counter.append(button);
-    }
-    actions.append(counter);
-    if (quantity > 0) {
-      actions.append(M.node('button', 'Удалить', 'text-button').attr({type: 'button',
-        'data-package-action': 'remove', 'aria-label': `Удалить: ${item.name}`}));
-      if (item.kind !== 'hourly') actions.append(M.node('button', 'В план', 'btn btn-outline-light')
-        .attr({type: 'button', 'data-package-action': 'apply', 'aria-label': `В план: ${item.name}`}));
-    }
-    return actions;
-  }
-
-  // Binding directly to these buttons now would miss buttons created on the next
-  // render. #package-options exists from HTML and receives their bubbling clicks.
-  $('#package-options').on('click', '[data-quantity], [data-package-action]', function () {
-    const button = $(this);
-    const row = button.closest('.package-option');
-    const id = row.attr('data-package-id');
-    const item = window.PixelCart.getCatalog().find(entry => entry.id === id);
-    if (!item) return;
-    const quantity = window.PixelCart.getSnapshot().items.find(entry => entry.id === id)?.quantity || 0;
-    const action = button.attr('data-package-action');
-    if (action === 'apply') {
-      ui.mode.val('packages'); ui.package.val(id); ui.guests.val(String(quantity));
-      onChange(); $('#package-picker').prop('open', false);
-      announce(`${item.name}: выбран для ${quantity} игроков. Проверьте дату и время визита.`);
-      ui.date.trigger('focus');
-    } else if (action === 'remove') {
-      window.PixelCart.setQuantity(id, 0);
-      announce(`${item.name}: удалено из корзины.`);
-      $('#cart-clear:not(:disabled)').trigger('focus');
-      if (!$('#cart-clear:focus').length) $('#package-picker > summary').trigger('focus');
-    } else {
-      const delta = Number(button.attr('data-delta'));
-      const next = Math.max(0, Math.min(rooms[item.room].capacity, quantity + delta));
-      window.PixelCart.setQuantity(id, next);
-      announce(`${item.name}: ${next} шт. в корзине.`);
-      const options = $('#package-options');
-      const current = options.find(`[data-quantity="${id}:${delta}"]:not(:disabled)`);
-      (current.length ? current : options.find(`[data-quantity="${id}:${-delta}"]:not(:disabled)`)).trigger('focus');
-    }
-  });
-
-  $("#other-room-packages").on('click', '[data-package-room]', function () {
-    const room = $(this).attr('data-package-room');
-    if (!has(rooms, room)) return;
-    ui.room.val(room);
-    onChange(ui.room[0]);
-    $('#package-picker > summary').trigger('focus');
-    announce(`Показаны пакеты зала ${rooms[room].name}.`);
-  });
-
-  function renderCartActions() {
-    const M = window.PixelMain;
-    let actions = $("#cart-actions");
-    if (!actions.length) {
-      actions = M.node('div', '', 'd-flex flex-wrap gap-3 my-3'); actions.attr('id', 'cart-actions');
-      const checkout = M.node('button', 'Подтвердить выбор', 'btn btn-outline-light');
-      checkout.prop('type', 'button'); checkout.attr('id', 'cart-checkout');
-      const clear = M.node('button', 'Очистить корзину', 'text-button'); clear.prop('type', 'button'); clear.attr('id', 'cart-clear');
-      const receipt = M.node('div', '', 'small my-3'); receipt.attr('id', 'cart-receipt'); receipt.attr('role', 'status');
-      checkout.on('click', () => {
-        const snapshot = window.PixelCart.getSnapshot();
-        if (!snapshot.count) return;
-        receipt.empty();
-        const title = M.node('p', 'Подбор пакетов готов');
-        const list = $("<ul>");
-        for (const item of snapshot.items) list.append(M.node('li', `${item.name}: ${item.quantity} × ${M.money(item.price)} = ${M.money(item.quantity * item.price)}`));
-        receipt.append(title, list, M.node('p', `Всего: ${snapshot.count} · ${M.money(snapshot.total)}. Данные не отправлены на сервер; реальный заказ, оплата и бронь не созданы.`));
-        receipt.addClass('success-message');
-      });
-      clear.on('click', () => {
-        window.PixelCart.replaceItems([]); announce('Корзина очищена.');
-        $("#package-picker").find('summary').first().trigger('focus');
-      });
-      actions.append(checkout, clear);
-      $("#package-selection-status").after(actions, receipt);
-    }
-    $("#cart-checkout").prop('disabled', cart.count === 0);
-    $("#cart-clear").prop('disabled', cart.count === 0);
+    ui.package.val(options.some(item => item.id === previous && !item.manualOnly) ? previous : '');
+    ui.package.attr('data-room', room);
   }
 
   function saveDraft() {
@@ -580,9 +412,9 @@ $(async function () {
     // prop('checked') is the live boolean; attr('checked') only describes the
     // original/default markup and would not track the visitor's latest toggle.
     ui.nearby.prop('checked', draft.nearby === true);
-    ui.mode.val(draft.mode === 'packages' ? 'packages' : 'hourly');
-    renderPackagePicker(window.PixelCart?.getSnapshot());
-    if (draft.packageId && [...ui.package.find('option').toArray().map(element => $(element))].some(option => option.val() === draft.packageId && !option.prop('disabled'))) ui.package.val(draft.packageId);
+    renderTariffOptions();
+    const options = ui.package.find('option:not(:disabled)').toArray();
+    ui.package.val(options.some(option => option.value === draft.packageId) ? draft.packageId : '');
   }
 
   function filterSeats() {
@@ -647,13 +479,17 @@ $(async function () {
   }
 
   function collectPlan() {
-    const item = window.PixelCart?.getCatalog().find(p => p.id === ui.package.val());
-    return { version: 2, mode: ui.mode.val(), room: ui.room.val(), guests: countText(ui.guests.val()),
-      duration: countText(ui.duration.val()), date: ui.date.val(), time: ui.time.val(),
+    const room = ui.room.val();
+    const duration = countText(ui.duration.val());
+    const selectedId = ui.package.val();
+    const item = window.PixelCart?.getCatalog().find(p => p.room === room && (selectedId
+      ? p.id === selectedId : p.kind === 'hours' && p.hours === Number(duration)));
+    return { version: 2, mode: item ? 'packages' : 'hourly', room, guests: countText(ui.guests.val()),
+      duration, date: ui.date.val(), time: parseStartTime(ui.time.val()),
       nearby: ui.nearby.prop('checked'), seat: ui.seat.val(), game: ui.game.val(),
       packageCatalogVersion: 2,
-      ...(ui.mode.val() === 'packages' ? {pricingPolicy:window.PixelPackagePricing?.policy, packageId:ui.package.val()} : {}),
-      packages: ui.mode.val() === 'packages' && item ? [{id:item.id, name:item.name, price:item.price, quantity:Number(ui.guests.val())}] : [] };
+      ...(item ? {pricingPolicy:window.PixelPackagePricing?.policy, packageId:item.id} : {}),
+      packages: item ? [{id:item.id, name:item.name, price:item.price, quantity:Number(ui.guests.val())}] : [] };
   }
 
   function collectContact() {
@@ -687,13 +523,13 @@ $(async function () {
     const method = checkoutMethod();
     const shortfall = method === 'balance' && view.user && Number.isInteger(view.user.balance)
       && view.user.balance < view.amount;
-    let note = 'Демо-бронь. Места подтвердит клуб.';
+    let note = '';
     let action = 'Забронировать';
     let disabled = view.busy;
     if (method !== 'reserve') {
-      note = 'Демо-оплата. Места подтвердит клуб.';
+      note = '';
       if (method === 'balance' && Number.isInteger(view.user?.balance)) {
-        note = `Демо-баланс ${money.format(view.user.balance)} ₸. Места подтвердит клуб.`;
+        note = `Баланс ${money.format(view.user.balance)} ₸.`;
       }
       if (view.sessionError) action = 'Проверить вход';
       else if (view.user === null) action = 'Войти для оплаты';
@@ -871,12 +707,12 @@ $(async function () {
     const cancelled = record.kind === 'cancelled';
     const ordered = paid || reserved;
     const test = request && record.receipt?.status === 'test';
-    ui['result-title'].text(cancelled ? 'Визит отменён' : reserved ? 'Бронь создана' : paid ? 'Демо-оплата принята'
+    ui['result-title'].text(cancelled ? 'Визит отменён' : reserved ? 'Бронь создана' : paid ? 'Оплата принята'
       : request ? test ? 'Проверка завершена' : 'Заявка отправлена' : 'План визита готов');
     ui.success.find('p').first().text(cancelled ? '' : reserved ? `Код брони ${record.receipt.id.slice(0, 8).toUpperCase()}. Места подтвердит клуб.` : paid ? (record.receipt.method === 'balance'
-      ? `Остаток на демо-балансе ${money.format(record.receipt.balance)} ₸. Места подтвердит клуб.`
+      ? `Остаток на балансе ${money.format(record.receipt.balance)} ₸. Места подтвердит клуб.`
       : 'Места подтвердит клуб.') : request ? test
-      ? 'Тестовая заявка. Она не отправлена администратору.'
+      ? 'Заявка отправлена администратору.'
       : 'Заявка отправлена администратору. Дождитесь подтверждения мест и условий по телефону.'
       : 'Позвоните в клуб, чтобы подтвердить места и уточнить оплату.');
     M.show(ui.result, true);
@@ -912,35 +748,20 @@ $(async function () {
     renderInlineErrors(false);
   }
 
-  function renderCart(snapshot) {
-    const items = snapshot && Array.isArray(snapshot.items) ? snapshot.items.filter(item =>
-      typeof item?.id === 'string' && typeof item.name === 'string' && integer(item.price, 1, Number.MAX_SAFE_INTEGER)
-      && integer(item.quantity, 1, 99) && Number.isSafeInteger(item.price * item.quantity))
-      .map(item => ({ id: item.id, name: item.name, price: item.price, quantity: item.quantity })) : [];
-    cart = { items, total: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-      count: items.reduce((sum, item) => sum + item.quantity, 0) };
-    renderPackagePicker(snapshot);
-    refreshConstraints();
-    renderEstimate();
-  }
-
-  function updateCart() {
-    renderCart(window.PixelCart?.getSnapshot());
-  }
-
-  function onChange(field) {
+  function onChange(editingField) {
     if (sending) return;
     clearErrors();
     filterSeats();
-    if (field === ui.room[0]) updateCart();
-    else { refreshConstraints(); renderEstimate(); }
-    renderInlineErrors(false);
+    renderTariffOptions();
+    refreshConstraints();
+    renderEstimate();
+    renderInlineErrors(false, editingField);
     saveDraft();
   }
 
   roomChoices.on('change', 'input', function () {
     ui.room.val(this.value);
-    onChange(ui.room[0]);
+    onChange();
   });
   form.on('click', '[data-visit-step]', function () {
     const field = ui[this.dataset.visitStep][0];
@@ -949,12 +770,22 @@ $(async function () {
     const maximum = Number(field.max);
     const value = Number.isFinite(field.valueAsNumber) ? Math.trunc(field.valueAsNumber) + delta : minimum;
     field.value = String(Math.min(maximum, Math.max(minimum, value)));
-    onChange(field);
+    onChange();
     if (this.disabled) field.focus({preventScroll: true});
   });
-  form.on('input change', 'input:not([name="room-choice"]), select, textarea', function () {
+  ui.time.on('input', function (event) {
+    const input = event.originalEvent;
+    if (!input?.inputType?.startsWith('insert') || input.isComposing || this.selectionEnd !== this.value.length) return;
+    if (/^\d{2}$/.test(this.value)) this.value += ':';
+    else if (/^\d{2}::$/.test(this.value)) this.value = this.value.slice(0, -1);
+  });
+  ui.time.on('change', function () {
+    const time = parseStartTime(this.value);
+    if (time) this.value = time;
+  });
+  form.on('input change', 'input:not([name="room-choice"]), select, textarea', function (event) {
     $(this).removeClass('is-invalid');
-    onChange(this);
+    onChange(event.type === 'input' && this === ui.time[0] ? this : undefined);
   });
   form.on('focusout', () => { refreshConstraints(); renderInlineErrors(false); });
   form.on('submit', async event => {
@@ -1025,16 +856,10 @@ $(async function () {
     form[0].reset();
     applyDraft({room: 'standard', guests: 1, duration: 2, date: clubNow().date, time: '', nearby: false, seat: '', game: ''});
     extras.find('details').add(extras).prop('open', false);
-    clearErrors(); filterSeats(); updateCart(); refreshConstraints(); renderEstimate(); renderInlineErrors(false); clearEntryQuery(); saveDraft();
+    clearErrors(); filterSeats(); refreshConstraints(); renderEstimate(); renderInlineErrors(false); clearEntryQuery(); saveDraft();
     editing();
     announce('Поля очищены.');
     ui.time.trigger('focus');
-  });
-
-  $("#booking-use-hourly").on('click', () => {
-    ui.mode.val('hourly');
-    $("#package-picker").prop('open', false);
-    onChange(); ui.mode.trigger('focus');
   });
 
   $(window).on('focus', refreshConstraints);
@@ -1047,27 +872,14 @@ $(async function () {
   const today = clubNow().date;
   if (!ui.time.val() && ui.date.val() < today) ui.date.val(today);
   const queryMessage = applyQuery();
-  filterSeats(); revealPreferences(); updateCart();
-  if (query.get('mode') === 'packages') {
-    ui.mode.val('packages');
-    const selectedRooms = packageRooms();
-    if (!query.has('room') && selectedRooms.length === 1 && has(rooms, selectedRooms[0])) ui.room.val(selectedRooms[0]);
-    filterSeats();
-    renderPackagePicker(window.PixelCart?.getSnapshot());
-  }
-  if (query.get('mode') === 'hourly') ui.mode.val('hourly');
+  filterSeats(); revealPreferences(); renderTariffOptions();
+  if (query.get('mode') === 'hourly') ui.package.val('');
   refreshConstraints(); renderEstimate();
-  if (ui.mode.val() === 'packages' || window.location.hash === '#packages' || $("#preferences").prop('open')) {
+  if (ui.package.val() || query.get('mode') === 'packages' || window.location.hash === '#packages' || $("#preferences").prop('open')) {
     extras.prop('open', true);
   }
   clearEntryQuery();
   editing();
-  function onCartChange() {
-    $("#cart-receipt").empty().removeClass('success-message');
-    updateCart();
-  }
-  if (window.PixelCart) window.PixelCart.subscribe(onCartChange);
-  else $(window).on('pixel:cartchange', onCartChange);
   const meaningfulDraft = restored.draft && (restored.draft.time || restored.draft.seat ||
     restored.draft.game || restored.draft.room !== 'standard' || Number(restored.draft.guests) !== 1 ||
     Number(restored.draft.duration) !== 2 || restored.draft.mode === 'packages' ||

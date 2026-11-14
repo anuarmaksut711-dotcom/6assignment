@@ -52,20 +52,15 @@ assert.ok(!fs.readFileSync(path.join(root, 'demofinal/index.html'), 'utf8').incl
     await page.goBack({waitUntil: 'networkidle'}); await ready(page); await page.waitForTimeout(800);
     assert.equal(digest(await sceneFrame()), reducedA, 'static portal survives browser history restore');
     await page.emulateMedia({reducedMotion: 'no-preference'});
-    await page.locator('#portal-motion').focus(); await page.keyboard.press('Space');
-    assert.equal(await page.locator('#portal-motion').getAttribute('aria-pressed'), 'true');
-    const paused = digest(await sceneFrame());
-    await page.mouse.move(1200, 250); await page.mouse.move(10, 10);
-    await page.waitForTimeout(200);
-    assert.equal(digest(await sceneFrame()), paused, 'pause freezes the pose even after pointer leave');
-    await page.keyboard.press('Space');
-    assert.equal(await page.locator('#portal-motion').getAttribute('aria-pressed'), 'false');
+    assert.equal(await page.locator('#portal-motion').count(), 0);
+    assert.equal(await page.locator('.portal-actions a[href="rooms.html"]').count(), 0);
+    assert.equal(await page.locator('.pixel-site-header a[href="rooms.html"]').count(), 1);
     await page.mouse.move(1300, 250); await page.waitForTimeout(160);
     const moving = digest(await sceneFrame());
-    assert.notEqual(moving, paused, 'pointer motion updates native geometry');
+    assert.notEqual(moving, reducedA, 'motion resumes when reduced motion is disabled');
     await page.evaluate(() => window.scrollTo(0, 240)); await page.waitForTimeout(160);
     assert.notEqual(digest(await sceneFrame()), moving, 'scroll changes portal projection');
-    console.log('PASS: reduced motion, keyboard pause/resume, frozen pose, pointer and scroll.');
+    console.log('PASS: reduced motion, pointer and scroll, and simplified hero controls.');
     await page.evaluate(() => {
       window.__portalLoss = document.getElementById('portal-canvas').getContext('webgl').getExtension('WEBGL_lose_context');
       window.__portalLoss.loseContext();

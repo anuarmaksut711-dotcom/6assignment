@@ -52,7 +52,12 @@ const tomorrow = new Date(Date.now() + 86400000 + 5 * 3600000).toISOString().sli
     assert.equal(attempts[1].plan.time, '14:00');
     const stored = await page.evaluate(() => JSON.stringify({...localStorage, ...sessionStorage}));
     assert.equal(stored.includes('Проверка формы') || stored.includes('77001234567'), false);
-    assert.deepEqual(await page.locator('.visit-result-actions a').allTextContents(), ['Позвонить в клуб', 'Новый визит']);
+    const clubPhone = page.locator('#booking-call a');
+    assert.equal(await clubPhone.isVisible(), false);
+    await page.locator('#booking-call summary').click();
+    assert.equal(await clubPhone.isVisible(), true);
+    assert.equal(await clubPhone.textContent(), '+7 775 351 36 93');
+    assert.equal(await clubPhone.getAttribute('href'), 'tel:+77753513693');
     await page.locator('#booking-edit').click();
     await page.locator('#booking-form').waitFor({state: 'visible'});
     assert.equal(await page.locator('#booking-time').inputValue(), '');

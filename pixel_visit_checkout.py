@@ -246,6 +246,43 @@ class VisitCheckout:
             } for row in rows]
             return {'visits': visits, 'balance': self._balance(db, uid)}
 
+    def update_visit(self, uid, kind, visit_id, payload):
+        if (set(payload) != {'date', 'time', 'seat', 'expectedPlan'}
+                or not all(isinstance(payload[key], str) for key in ('date', 'time', 'seat'))
+                or not isinstance(payload['expectedPlan'], dict)):
+            raise AccountError(400, 'invalid', 'Проверьте данные визита.')
+        with closing(self.connect()) as db, db:
+            db.execute('BEGIN IMMEDIATE')
+            if kind == 'reservation':
+                table = 'visit_reservations'
+                row = db.execute('SELECT * FROM visit_reservations WHERE id = ? AND account_uid = ?',
+                                 (visit_id, uid)).fetchone()
+                if row is None:
+                    raise AccountError(404, 'reservation_not_found', 'Бронь не найдена.')
+            else:
+                table = 'visit_checkout_orders'
+                row = self._get_order(db, uid, visit_id)
+                if row['paid_at'] is None:
+                    raise AccountError(409, 'visit_not_confirmed', 'Оплата визита ещё не подтверждена.')
+            if row['cancelled_at'] is not None:
+                raise AccountError(409, 'visit_cancelled', 'Визит уже отменён.')
+            if row['starts_at'] is None or row['starts_at'] <= int(time.time()):
+                raise AccountError(409, 'visit_expired', 'Время визита уже наступило.')
+            current = json.loads(row['plan'])
+            changes = {key: payload[key] for key in ('date', 'time', 'seat')}
+            # A repeated save is safe even if the first response was lost.
+            if payload['expectedPlan'] != current and any(current.get(key, '') != value for key, value in changes.items()):
+                raise AccountError(409, 'visit_changed', 'Бронь уже изменена. Обновите список визитов и попробуйте снова.')
+            checked, amount, starts_at = self.quote({**current, **changes})
+            if kind == 'order' and amount != row['amount']:
+                raise AccountError(409, 'price_changed',
+                                   'Для выбранного времени меняется стоимость. Выберите время с прежним тарифом или свяжитесь с клубом.')
+            db.execute(f'UPDATE {table} SET plan = ?, amount = ?, starts_at = ? WHERE id = ?',
+                       (json.dumps(checked, ensure_ascii=False), amount, starts_at, visit_id))
+            return {'id': visit_id, 'kind': kind, 'plan': checked, 'amount': amount,
+                    'balance': self._balance(db, uid),
+                    **({'method': row['method'], 'status': 'paid'} if kind == 'order' else {'status': 'reserved'})}
+
     def cancel_visit(self, uid, kind, visit_id):
         with closing(self.connect()) as db, db:
             db.execute('BEGIN IMMEDIATE')

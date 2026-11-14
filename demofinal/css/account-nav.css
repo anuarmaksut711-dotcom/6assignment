@@ -5,13 +5,18 @@
   flex: none;
   width: 44px;
   height: 44px;
+  border: 1px solid transparent;
   border-radius: 50%;
+  background: transparent;
   color: var(--pixel-muted);
   text-decoration: none;
+  transition: color .15s ease, border-color .15s ease;
 }
 .pixel-account-link:is(:hover, :focus-visible) {
-  background: var(--pixel-surface);
-  color: var(--pixel-ink);
+  color: var(--pixel-focus);
+}
+.pixel-account-link:hover {
+  border-color: color-mix(in srgb, currentColor 45%, transparent);
 }
 .pixel-account-link:focus-visible {
   outline: 2px solid var(--pixel-focus);

@@ -1,0 +1,54 @@
+.pixel-header-actions {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 8px;
+}
+
+.premium-header:not(:has(nav)) > .pixel-header-actions {
+  margin-inline-start: auto;
+}
+
+.pixel-language {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--pixel-line);
+  border-radius: 10px;
+  color: var(--pixel-muted);
+}
+
+.pixel-booking-page .pixel-language {
+  --pixel-line: var(--visit-line);
+  --pixel-muted: var(--visit-muted);
+}
+
+.pixel-language button {
+  min-width: 32px;
+  min-height: 38px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: .75rem;
+  font-weight: 750;
+}
+
+.pixel-language button[aria-pressed="true"],
+.pixel-language button:hover {
+  color: var(--pixel-focus);
+  background: color-mix(in srgb, var(--pixel-focus) 12%, transparent);
+}
+
+@media (max-width: 767px) {
+  .premium-header > .pixel-header-actions { margin-inline-start: auto; }
+  .premium-header:has(.pixel-header-actions) > nav { order: 1; }
+  .premium-header:has(.pixel-header-actions) > .club-location { display: none; }
+  .premium-header:not(:has(nav)):has(.pixel-header-actions) {
+    height: 72px;
+    align-content: center;
+    padding-block: 0;
+  }
+}
