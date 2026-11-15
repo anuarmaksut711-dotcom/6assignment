@@ -248,7 +248,7 @@ $(function () {
     }
     wake();
   }
-  function wake() { if (!request && resources && visible && !reduced && !document.hidden && !contextLost && !disposed) request = requestAnimationFrame(frame); }
+  function wake() { if (!request && resources && visible && !mobile() && !reduced && !document.hidden && !contextLost && !disposed) request = requestAnimationFrame(frame); }
   function resize() {
     if (!resources || contextLost) return;
     const rect = visual.getBoundingClientRect(); width = Math.max(1, rect.width); height = Math.max(1, rect.height);

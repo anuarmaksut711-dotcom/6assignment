@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from hashlib import pbkdf2_hmac, sha256
 from hmac import compare_digest
 from http.cookies import SimpleCookie
-from ipaddress import ip_address
+from ipaddress import ip_address, ip_network
 import json
 from pathlib import Path
 import re
@@ -66,6 +66,16 @@ def _is_loopback(host):
         return False
 
 
+def is_private_network_address(host):
+    """Allow explicit local development on RFC1918/ULA addresses only."""
+    try:
+        address = ip_address(host or '')
+    except ValueError:
+        return False
+    return any(address in ip_network(network) for network in
+               ('10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', 'fc00::/7'))
+
+
 def _normalize_email(value):
     if not isinstance(value, str) or len(value) > 254:
         raise AccountError(422, 'invalid_email', 'Укажите действующий адрес электронной почты.')
@@ -115,10 +125,12 @@ def _public_purchase(row):
 
 
 class PixelAccounts:
-    def __init__(self, db_path: Path | str, origin: str, *, remember_sessions=False):
+    def __init__(self, db_path: Path | str, origin: str, *, remember_sessions=False, allow_lan_http=False):
         parsed = urlsplit(origin)
         self._secure = parsed.scheme == 'https'
-        local_http = parsed.scheme == 'http' and bool(parsed.hostname) and _is_loopback(parsed.hostname)
+        local_http = parsed.scheme == 'http' and bool(parsed.hostname) and (
+            _is_loopback(parsed.hostname) or (allow_lan_http and is_private_network_address(parsed.hostname))
+        )
         self.available = bool(parsed.hostname) and (self._secure or local_http)
         self._remember_sessions = remember_sessions and local_http
         self._session_age = _LOCAL_SESSION_AGE if self._remember_sessions else _SESSION_AGE
@@ -446,7 +458,7 @@ class PixelAccounts:
                 'SELECT card_added FROM demo_wallets WHERE account_uid = ?', (uid,),
             ).fetchone()
             if wallet is None or not wallet['card_added']:
-                raise AccountError(409, 'demo_card_required', 'Сначала добавьте тестовую карту.')
+                raise AccountError(409, 'demo_card_required', 'Не удалось подготовить оплату. Попробуйте ещё раз.')
             db.execute(
                 "UPDATE balance_topups SET status = 'paid', paid_at = ? WHERE id = ?",
                 (int(time.time()), order_id),

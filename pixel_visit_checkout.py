@@ -9,6 +9,7 @@ import time
 from uuid import uuid4
 
 from pixel_accounts import AccountError
+from pixel_contacts import normalize_contact
 
 
 _REQUEST_ID = re.compile(r'[A-Za-z0-9_-]{16,80}')
@@ -24,9 +25,10 @@ def request_fingerprint(payload, invalid):
 
 
 class VisitCheckout:
-    def __init__(self, connect, quote, plan_start):
+    def __init__(self, connect, quote, plan_start, notifier=None):
         self.connect = connect
         self.quote = quote
+        self.notifier = notifier
         with closing(self.connect()) as db, db:
             db.execute('BEGIN IMMEDIATE')
             db.execute("""
@@ -59,6 +61,13 @@ class VisitCheckout:
                 )
             """)
             self._migrate_existing_visits(db, plan_start)
+            db.execute("""
+                CREATE TABLE IF NOT EXISTS visit_telegram_delivery (
+                    reservation_id TEXT PRIMARY KEY REFERENCES visit_reservations(id),
+                    reference TEXT NOT NULL,
+                    contact TEXT NOT NULL
+                )
+            """)
 
     @staticmethod
     def _migrate_existing_visits(db, plan_start):
@@ -66,6 +75,8 @@ class VisitCheckout:
         if 'cancelled_at' not in order_columns:
             db.execute('ALTER TABLE visit_checkout_orders ADD COLUMN cancelled_at INTEGER')
         reservation_columns = {row['name'] for row in db.execute('PRAGMA table_info(visit_reservations)')}
+        if 'guest_contact' not in reservation_columns:
+            db.execute("ALTER TABLE visit_reservations ADD COLUMN guest_contact TEXT NOT NULL DEFAULT '{}'")
         if 'account_uid' not in reservation_columns:
             db.execute('ALTER TABLE visit_reservations ADD COLUMN account_uid TEXT REFERENCES accounts(uid) ON DELETE RESTRICT')
         if 'cancelled_at' not in reservation_columns:
@@ -181,15 +192,66 @@ class VisitCheckout:
     def get_reservation(self, reservation_id):
         with closing(self.connect()) as db:
             row = db.execute('SELECT * FROM visit_reservations WHERE id = ?', (reservation_id,)).fetchone()
-            return self._reservation_result(row)
+            result = self._reservation_result(row)
+            delivery = db.execute('SELECT reference FROM visit_telegram_delivery WHERE reservation_id = ?',
+                                  (reservation_id,)).fetchone()
+            if delivery:
+                result['reference'] = delivery['reference']
+            return result
+
+    def start_telegram_reservation(self, payload, uid, service, client):
+        request_id = payload.get('requestId')
+        if (set(payload) != {'plan', 'requestId', 'contact'} or not isinstance(request_id, str)
+                or not _REQUEST_ID.fullmatch(request_id) or not isinstance(payload.get('contact'), dict)):
+            raise AccountError(400, 'invalid', 'Проверьте данные брони.')
+        # Delivery owns retries: persisting a receipt afterwards cannot send the same booking twice.
+        receipt = service.submit({'plan': payload.get('plan'), 'contact': payload['contact'],
+                                  'requestId': sha256(request_id.encode()).hexdigest()[:32]}, client, require_full_contact=False)
+        reservation = self.start_reservation({'plan': payload['plan'], 'requestId': request_id, 'contact': payload['contact']}, uid)
+        with closing(self.connect()) as db, db:
+            db.execute('INSERT OR IGNORE INTO visit_telegram_delivery (reservation_id, reference, contact) VALUES (?, ?, ?)',
+                       (reservation['id'], receipt['reference'], json.dumps(payload['contact'], ensure_ascii=False)))
+        return self.get_reservation(reservation['id'])
+
+    def notify_change(self, db, row, action, plan):
+        if self.notifier is None:
+            return
+        delivery = db.execute('SELECT * FROM visit_telegram_delivery WHERE reservation_id = ?', (row['id'],)).fetchone()
+        if delivery:
+            reference = delivery['reference']
+            contact = json.loads(delivery['contact'])
+        else:
+            contact = json.loads(row['guest_contact'])
+            if not contact.get('name') and not contact.get('phone'):
+                owner = db.execute('SELECT name, email FROM accounts WHERE uid = ?', (row['account_uid'],)).fetchone()
+                if owner:
+                    contact = {**contact, 'name': owner['name'], 'email': owner['email']}
+            reference = sha256(row['request_id'].encode()).hexdigest()[:8].upper()
+            db.execute('INSERT INTO visit_telegram_delivery (reservation_id, reference, contact) VALUES (?, ?, ?)',
+                       (row['id'], reference, json.dumps(contact, ensure_ascii=False)))
+        lines = [action + ' PIXEL · ' + reference,
+                 'Имя: ' + contact.get('name', ''), 'Телефон: ' + contact.get('phone', ''),
+                 'Зал: ' + plan['room'], 'Начало: ' + plan['date'] + ', ' + plan['time'],
+                 'Игроки / ПК: ' + str(plan['guests']), 'Длительность: ' + str(plan['duration']) + ' ч']
+        if contact.get('email'):
+            lines.insert(3, 'E-mail: ' + contact['email'])
+        if plan.get('seat'):
+            lines.append('ПК: ' + plan['seat'])
+        self.notifier('\n'.join(lines))
 
     def start_reservation(self, payload, uid=None):
         plan = payload.get('plan')
         request_id = payload.get('requestId')
         invalid = 'Проверьте данные брони.'
-        if (set(payload) != {'plan', 'requestId'} or not isinstance(plan, dict)
+        if (set(payload) - {'plan', 'requestId', 'contact'} or not isinstance(plan, dict)
                 or not isinstance(request_id, str) or not _REQUEST_ID.fullmatch(request_id)):
             raise AccountError(400, 'invalid', invalid)
+        contact = {}
+        if uid is None or 'contact' in payload:
+            fields = {}
+            contact = normalize_contact(payload.get('contact', {}), fields, require_both=False)
+            if fields:
+                raise AccountError(422, 'contact', next(iter(fields.values())))
         fingerprint = request_fingerprint(payload, invalid)
 
         with closing(self.connect()) as db, db:
@@ -204,10 +266,10 @@ class VisitCheckout:
             reservation_id = uuid4().hex
             db.execute("""
                 INSERT INTO visit_reservations
-                    (id, request_id, fingerprint, plan, amount, created_at, account_uid, starts_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    (id, request_id, fingerprint, plan, amount, created_at, account_uid, starts_at, guest_contact)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (reservation_id, request_id, fingerprint, json.dumps(checked, ensure_ascii=False), amount,
-                  int(time.time()), uid, starts_at))
+                  int(time.time()), uid, starts_at, json.dumps(contact, ensure_ascii=False)))
             return {'id': reservation_id, 'plan': checked, 'amount': amount, 'status': 'reserved'}
 
     def claim_reservation(self, uid, payload):
@@ -277,6 +339,8 @@ class VisitCheckout:
             if kind == 'order' and amount != row['amount']:
                 raise AccountError(409, 'price_changed',
                                    'Для выбранного времени меняется стоимость. Выберите время с прежним тарифом или свяжитесь с клубом.')
+            if kind == 'reservation' and checked != current:
+                self.notify_change(db, row, 'Изменение брони', checked)
             db.execute(f'UPDATE {table} SET plan = ?, amount = ?, starts_at = ? WHERE id = ?',
                        (json.dumps(checked, ensure_ascii=False), amount, starts_at, visit_id))
             return {'id': visit_id, 'kind': kind, 'plan': checked, 'amount': amount,
@@ -301,6 +365,8 @@ class VisitCheckout:
                 now = int(time.time())
                 if row['starts_at'] is None or row['starts_at'] <= now:
                     raise AccountError(409, 'visit_expired', 'Время визита уже наступило.')
+                if kind == 'reservation':
+                    self.notify_change(db, row, 'Отмена брони', json.loads(row['plan']))
                 db.execute(f'UPDATE {table} SET cancelled_at = ? WHERE id = ?', (now, visit_id))
                 if kind == 'order' and row['method'] == 'balance':
                     db.execute('UPDATE demo_wallets SET balance = balance + ? WHERE account_uid = ?',

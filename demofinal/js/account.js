@@ -11,7 +11,7 @@
   ];
   const ui = Object.fromEntries(ids.map(id => [id, document.getElementById('account-' + id)]));
   if (location.protocol === 'file:') {
-    ui.error.textContent = 'Чтобы войти, запустите start-local.cmd в папке проекта. Он откроет сайт через локальный сервер.';
+    ui.error.textContent = 'Для входа откройте сайт в браузере по его адресу.';
     return;
   }
 
@@ -160,10 +160,11 @@
       ui['checkout-return'].hidden = false;
     }
     showBalance(user.balance);
+    document.querySelector('.account-balance-card').hidden = user.walletMode !== 'test';
     if (user.walletMode === 'test') {
       enableTopup();
-      void loadVisits(user.uid);
     }
+    void loadVisits(user.uid);
     for (const [id, value] of [['name', user.name], ['email', user.email]]) {
       ui[id].textContent = value || '';
       ui[id].closest('div').hidden = !value;
@@ -345,7 +346,7 @@
         wallet.state = 'off';
         ui['topup-toggle'].hidden = true;
         setTopupOpen(false);
-        setWalletNotice('Пополнение доступно в локальной версии.');
+        setWalletNotice('');
       } else if (error.status === 401) {
         setWalletNotice('Не удалось подтвердить вход для кошелька.', true);
       } else {

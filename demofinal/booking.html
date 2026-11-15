@@ -12,18 +12,18 @@
 <link rel="stylesheet" href="css/premium.css?v=14">
 <!-- jQuery 3.7.1 full build: effects are included; defer preserves library-before-script order. -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous" defer></script>
-<script src="js/main.js?v=2" defer></script>
+<script src="js/main.js?v=3" defer></script>
 <script src="js/packages.js?v=6" defer>
 </script>
 <script src="js/package-pricing.js?v=1" defer></script>
 <script src="js/booking-delivery.js?v=1" defer></script>
-<script src="js/booking.js?v=23" defer>
+<script src="js/booking.js?v=28" defer>
 </script>
-<link rel="stylesheet" href="css/portal.css?v=5">
+<link rel="stylesheet" href="css/portal.css?v=8">
 <link rel="stylesheet" href="css/account-nav.css?v=3">
-<link rel="stylesheet" href="css/booking.css?v=8">
-  <link rel="stylesheet" href="css/language.css">
-  <script src="js/language.js" defer></script>
+<link rel="stylesheet" href="css/booking.css?v=9">
+  <link rel="stylesheet" href="css/language.css?v=2">
+  <script src="js/language.js?v=7" defer></script>
 </head>
 <body class="pixel-booking-page"><a class="visually-hidden-focusable pixel-skip" href="#main-content">Перейти к содержимому</a>
 <header class="pixel-site-header">
@@ -61,7 +61,7 @@
                 </div>
                 <div>
                   <label for="booking-time">Начало</label>
-                  <input id="booking-time" class="form-control" type="text" inputmode="numeric" autocomplete="off" placeholder="18:30" required aria-describedby="booking-time-help booking-time-error">
+                  <input id="booking-time" class="form-control" type="text" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="ЧЧ:ММ" required aria-describedby="booking-time-help booking-time-error">
                   <p id="booking-time-error" class="field-error" hidden></p>
                 </div>
                 <div>
@@ -98,7 +98,7 @@
             </fieldset>
           </div>
           <section id="booking-contact-step" class="visit-group" aria-labelledby="booking-contact-title" hidden>
-            <h2 id="booking-contact-title">Контакты для подтверждения</h2>
+            <h2 id="booking-contact-title">Контакты для связи</h2>
             <fieldset id="booking-contact-fields" class="visit-fields">
               <legend class="visually-hidden">Контактные данные</legend>
               <div>
@@ -118,6 +118,7 @@
               <div class="visit-disclosure-body" id="booking-email-slot"></div>
             </details>
           </section>
+          <p id="booking-room-note" class="visit-context-note" hidden>Duo — два ПК без отдельных стен и полной звукоизоляции.</p>
           <details id="booking-extras" class="visit-disclosure visit-extras">
             <summary>Пакет и пожелания <span id="booking-options-caption"></span></summary>
             <div class="visit-disclosure-body">
@@ -136,7 +137,7 @@
                 <div class="visit-disclosure-body visit-preference-fields">
                   <div>
                     <label for="booking-seat">Предпочтительный ПК</label>
-                    <select id="booking-seat" name="seat" class="form-select" aria-describedby="booking-seat-help">
+                    <select id="booking-seat" name="seat" class="form-select">
                       <option value="" selected>Любой компьютер в выбранном зале</option>
                         <optgroup label="Standard">
                           <option value="pc-01">ПК 01</option>
@@ -172,7 +173,6 @@
                           <option value="vip-05">VIP 05</option>
                         </optgroup>
                     </select>
-                    <p id="booking-seat-help" class="form-text">Посадку подтвердит клуб.</p>
                   </div>
                   <div>
                     <label for="booking-game">Игра</label>
@@ -215,7 +215,7 @@
             </div>
             <p id="booking-price-note" class="visit-price-note"></p>
             <p id="booking-end" class="visit-price-note" hidden></p>
-            <button id="booking-submit" class="btn btn-primary visit-next" type="submit" disabled>Сохранить план</button>
+            <button id="booking-submit" class="btn btn-primary visit-next" type="submit" disabled>Продолжить</button>
             <p class="visit-price-note visit-save-note" id="booking-submit-note"></p>
           </section>
         </form>
@@ -223,42 +223,46 @@
     </div>
     <dialog class="visit-checkout" id="booking-checkout" aria-labelledby="booking-checkout-title" aria-describedby="booking-checkout-summary booking-checkout-total">
       <div class="visit-checkout-heading">
-        <h2 id="booking-checkout-title">Оформление визита</h2>
+        <h2 id="booking-checkout-title">Оформление брони</h2>
         <button id="booking-checkout-back" class="visit-link" type="button">Назад</button>
       </div>
       <div class="visit-checkout-summary">
         <p id="booking-checkout-summary"></p>
         <strong id="booking-checkout-total"></strong>
       </div>
-      <form id="booking-checkout-form">
+      <form id="booking-checkout-form" novalidate>
+        <div id="booking-guest-contact" class="visit-guest-contact">
+          <label for="booking-guest-identity">На кого оформить бронь?</label>
+          <input id="booking-guest-identity" class="form-control" type="text" maxlength="80" autocomplete="off" placeholder="Имя или телефон" required aria-describedby="booking-guest-hint booking-guest-error">
+          <p id="booking-guest-hint" class="visit-guest-hint">Достаточно одного — как вам удобнее.</p>
+          <p id="booking-guest-error" class="field-error" role="alert" hidden></p>
+        </div>
         <fieldset id="booking-checkout-methods">
           <legend class="visually-hidden">Способ оформления</legend>
-          <label><input name="visit-payment-method" type="radio" value="reserve" checked autofocus> Бронь без оплаты</label>
+          <label><input name="visit-payment-method" type="radio" value="reserve" checked> Бронь без оплаты</label>
           <label><input name="visit-payment-method" type="radio" value="card"> Картой</label>
           <label><input name="visit-payment-method" type="radio" value="balance"> С баланса</label>
         </fieldset>
         <p id="booking-checkout-note" class="visit-checkout-note"></p>
         <p id="booking-checkout-message" class="visit-checkout-message" role="status"></p>
         <a id="booking-checkout-wallet" class="visit-link" href="account.html?return=booking&amp;wallet=1" hidden>Пополнить баланс</a>
-        <button id="booking-checkout-submit" class="btn btn-primary" type="submit">Забронировать</button>
+        <button id="booking-checkout-submit" class="btn btn-primary" type="submit">Создать бронь</button>
       </form>
     </dialog>
     <section id="booking-result" class="visit-result" aria-labelledby="booking-result-title" hidden>
       <p id="booking-result-status" class="booking-status" role="status"></p>
-      <h2 id="booking-result-title" tabindex="-1">План сохранён</h2>
+      <h2 id="booking-result-title" tabindex="-1">Бронь</h2>
       <div id="booking-success" hidden><p></p></div>
       <div id="booking-saved-price" class="saved-price"></div>
       <dl id="booking-saved-review" class="review-list"></dl>
       <div class="visit-result-actions align-items-start">
-        <details id="booking-call" class="text-center">
-          <summary class="btn btn-primary w-100">Позвонить в клуб</summary>
-          <a class="d-inline-block py-2" href="tel:+77753513693">+7 775 351 36 93</a>
-        </details>
+        <a id="booking-call" class="btn btn-primary" href="tel:+77753513693">Позвонить в клуб</a>
         <a id="booking-edit" class="btn visit-outline" href="booking.html">Новый визит</a>
+        <a id="booking-manage" class="btn visit-outline" href="account.html" hidden>Управлять бронью</a>
       </div>
     </section>
     <div class="visit-help" id="booking-help">
-      <a href="help.html#help-payment">Оплата и отмена</a>
+      <a href="help.html#help-confirmation">Управление бронью</a>
       <button id="booking-reset" class="visit-link" type="button" disabled>Сбросить параметры</button>
     </div>
   </div>

@@ -59,3 +59,16 @@ body:not(.portal-home) main{animation:pixel-page-arrive .22s cubic-bezier(.16,1,
 .rooms-package-entry a{display:inline-flex;align-items:center;min-height:44px}
 .rooms-package-entry span{display:block;font-size:14px;color:var(--pixel-muted)}
 @media(max-width:767px){#booking-mobile-label{font-size:14px}}
+
+/* On phones the club photograph carries the atmosphere without distant 3D framing. */
+@media(max-width:767px){
+ .portal-visual{flex-basis:clamp(170px,48vw,220px);height:clamp(170px,48vw,220px);margin:0 20px 24px;overflow:hidden;border-radius:4px;background:none}
+ .portal-visual::after{display:none}
+ .portal-hero #portal-canvas{display:none}
+ .portal-hero .portal-fallback{inset:0;width:100%;height:100%;perspective:none;visibility:visible;opacity:1}
+ .portal-hero .fallback-frame{padding:0;background:none;transform:none;box-shadow:none}
+ .portal-hero .fallback-frame img{filter:none;object-position:center 55%}
+ .portal-home .home-room-section{padding-top:32px}
+ .room-title .room-seating-note{margin-top:10px;max-width:28ch;line-height:1.6}
+}
+.room-title .room-seating-note{font-size:.875rem;line-height:1.6;max-width:32ch}

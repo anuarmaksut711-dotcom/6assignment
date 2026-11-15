@@ -1,12 +1,28 @@
 /env/
 .env
+.env.*
 /var/
 __pycache__/
 *.pyc
 *.log
-.env.*
-!.env.example
 /node_modules/
+
+# Local workspace files and temporary output
+/.*/
+/tmp/
+/temp/
+/coverage/
+/playwright-report/
+/test-results/
+*.tmp
+*.bak
+*.swp
+DESIGN.md
+AGENTS.md
+PROMPT.md
+PROMPTS.md
+prompts/
+/list_telegram_chats.py
 
 # Private keys and exported credentials
 *.pem

@@ -19,9 +19,10 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import unquote, urlsplit
 from urllib.request import Request, urlopen
 
-from pixel_accounts import AccountError, PixelAccounts
+from pixel_accounts import AccountError, PixelAccounts, is_private_network_address
 from pixel_auth import AUTH_SETTING_KEYS, AuthError, PixelAuth
 from pixel_visit_checkout import VisitCheckout
+from pixel_contacts import normalize_contact
 
 ROOT = Path(__file__).resolve().parent
 ASTANA = timezone(timedelta(hours=5))
@@ -100,44 +101,25 @@ def load_settings(path=ROOT / 'env' / '.env'):
 
 
 def configured(settings):
-    return bool(re.fullmatch(r'\d{5,}:[A-Za-z0-9_-]{20,}', settings['TELEGRAM_BOT_TOKEN'])
-                and re.fullmatch(r'-?\d+|@[A-Za-z0-9_]{5,}', settings['TELEGRAM_CHAT_ID'])
-                and (not settings['TELEGRAM_MESSAGE_THREAD_ID'] or re.fullmatch(r'[1-9]\d*', settings['TELEGRAM_MESSAGE_THREAD_ID'])))
+    return bool(re.fullmatch(r'\d{5,}:[A-Za-z0-9_-]{20,}', settings.get('TELEGRAM_BOT_TOKEN', ''))
+                and re.fullmatch(r'-?\d+|@[A-Za-z0-9_]{5,}', settings.get('TELEGRAM_CHAT_ID', ''))
+                and (not settings.get('TELEGRAM_MESSAGE_THREAD_ID') or re.fullmatch(r'[1-9]\d*', settings['TELEGRAM_MESSAGE_THREAD_ID'])))
 
 
-def validate_contact(contact, fields):
-    name = contact.get('name', '')
-    if not isinstance(name, str) or not 2 <= len(name.strip()) <= 80 or any(unicodedata.category(c).startswith('C') for c in name):
-        fields['name'] = 'Укажите имя: от 2 до 80 символов.'
-        name = ''
-    phone = contact.get('phone', '')
-    if not isinstance(phone, str) or len(phone) > 32 or not re.fullmatch(r'[+\d ()-]+', phone):
-        phone = ''
-    digits = re.sub(r'\D', '', phone)
-    if len(digits) == 11 and digits.startswith('8') and not phone.strip().startswith('+'):
-        digits = '7' + digits[1:]
-    if not 10 <= len(digits) <= 15 or digits.startswith('0'):
-        fields['phone'] = 'Укажите телефон с кодом страны, например +7 700 000 00 00.'
-    email = contact.get('email', '')
-    if not isinstance(email, str):
-        email = ''
-        fields['email'] = 'Укажите e-mail в формате name@example.com или оставьте поле пустым.'
-    email = email.strip()
-    if email and (len(email) > 254 or not re.fullmatch(r'[^\s@\x00-\x1f\x7f]+@[^\s@.\x00-\x1f\x7f]+(?:\.[^\s@.\x00-\x1f\x7f]+)+', email)):
-        fields['email'] = 'Укажите e-mail в формате name@example.com или оставьте поле пустым.'
-    return {'name': name.strip(), 'phone': '+' + digits, **({'email': email} if email else {})}
+def validate_contact(contact, fields, *, require_both=True):
+    return normalize_contact(contact, fields, require_both=require_both)
 
 
 def visit_start(date, clock):
     return datetime.fromisoformat(f'{date}T{clock}:00').replace(tzinfo=ASTANA)
 
 
-def validate(payload, now=None, *, require_contact=True):
+def validate(payload, now=None, *, require_contact=True, require_full_contact=True):
     if (not isinstance(payload, dict) or not isinstance(payload.get('plan'), dict)
             or (require_contact and not isinstance(payload.get('contact'), dict))):
         raise BookingError(400, 'invalid', 'Проверьте данные заявки.')
     fields = {}
-    contact = validate_contact(payload['contact'], fields) if require_contact else {}
+    contact = validate_contact(payload['contact'], fields, require_both=require_full_contact) if require_contact else {}
     source = payload['plan']
     room = source.get('room')
     if not isinstance(room, str) or room not in ROOMS:
@@ -214,7 +196,7 @@ def message_for(booking, reference):
     room, _, hourly = ROOMS[plan['room']]
     amount = plan['estimate']['total'] if plan['mode'] == 'packages' else hourly * plan['guests'] * plan['duration']
     money = lambda n: f'{n:,}'.replace(',', ' ')
-    lines = [f'Новая заявка PIXEL · {reference}', '', f'Имя: {contact["name"]}', f'Телефон: {contact["phone"]}',
+    lines = [f'Новая бронь PIXEL · {reference}', '', f'Имя: {contact["name"]}', f'Телефон: {contact["phone"]}',
              f'Зал: {room}', f'Игроки / ПК: {plan["guests"]}', f'Начало: {start:%d.%m.%Y, %H:%M} (Астана)',
              f'Длительность: {plan["duration"]} ч', f'Окончание: {start + timedelta(hours=plan["duration"]):%d.%m.%Y, %H:%M}']
     if contact.get('email'):
@@ -236,7 +218,7 @@ def message_for(booking, reference):
         lines.append('Пожелание: сидеть рядом.')
     if plan['game']:
         lines.append(f'Игра: {GAMES[plan["game"]]}')
-    lines += ['', 'Нужно связаться с гостем и подтвердить места. Это заявка, не подтверждённая бронь.']
+    lines += ['', 'Бронь оформлена на сайте. Изменения и отмена поступят отдельными сообщениями.']
     return '\n'.join(lines)
 
 
@@ -279,10 +261,10 @@ class BookingService:
     def connect(self):
         return sqlite3.connect(self.db_path, timeout=5)
 
-    def submit(self, payload, client):
+    def submit(self, payload, client, *, require_full_contact=True):
         if not self.dry_run and not configured(self.settings):
             raise BookingError(503, 'unavailable', 'Отправка заявок пока недоступна. Свяжитесь с клубом по телефону.')
-        booking = validate(payload)
+        booking = validate(payload, require_full_contact=require_full_contact)
         request_id = payload.get('requestId', '')
         if not isinstance(request_id, str) or not re.fullmatch(r'[a-f0-9]{32}', request_id):
             raise BookingError(400, 'invalid', 'Не удалось подготовить заявку. Обновите страницу.')
@@ -597,9 +579,10 @@ class Handler(SimpleHTTPRequestHandler):
         return uid
 
     def handle_visit_checkout(self, path):
-        available = self.wallet_available() and self.server.visit_checkout is not None
+        payments_available = self.wallet_available()
+        available = self.server.visit_checkout is not None and self.server.accounts.available
         if self.command == 'GET' and path == '/api/visit-checkout/config':
-            self.json_response(200, {'available': available})
+            self.json_response(200, {'available': available, **({} if payments_available else {'paymentsAvailable': False})})
             return
         try:
             if not available:
@@ -607,7 +590,14 @@ class Handler(SimpleHTTPRequestHandler):
             checkout = self.server.visit_checkout
             if self.command == 'POST' and path == '/api/visit-checkout/reservations':
                 payload = self.read_account_payload('Проверьте данные брони.')
-                self.json_response(201, checkout.start_reservation(payload, self.checkout_account(required=False)))
+                uid = self.checkout_account(required=False)
+                if self.server.local_booking:
+                    result = checkout.start_reservation(payload, uid)
+                else:
+                    if hasattr(self.server, 'refresh_settings'):
+                        self.server.service.settings.update(self.server.refresh_settings())
+                    result = checkout.start_telegram_reservation(payload, uid, self.server.service, self.client_address[0])
+                self.json_response(201, result)
                 return
             reservation_path = re.fullmatch(r'/api/visit-checkout/reservations/([0-9a-f]{32})', path)
             if self.command == 'GET' and reservation_path:
@@ -615,6 +605,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return
 
             order_path = re.fullmatch(r'/api/visit-checkout/orders/([0-9a-f]{32})(/confirm)?', path)
+            if not payments_available and path.startswith('/api/visit-checkout/orders'):
+                raise AccountError(404, 'not_found', 'Страница не найдена.')
             starting = self.command == 'POST' and path == '/api/visit-checkout/orders'
             reading = self.command == 'GET' and order_path and not order_path[2]
             confirming = self.command == 'POST' and order_path and order_path[2]
@@ -659,34 +651,47 @@ class Handler(SimpleHTTPRequestHandler):
             self.json_response(503, {'code': 'checkout_unavailable', 'message': 'Не удалось завершить операцию. Попробуйте ещё раз.'})
 
 
+def local_site_origin(host, origin):
+    parsed = urlsplit(origin)
+    return parsed.scheme == 'http' and (
+        host in ('127.0.0.1', 'localhost') and parsed.hostname in ('127.0.0.1', 'localhost')
+        or is_private_network_address(host) and parsed.hostname == host
+    )
+
+
 def make_server(host, port, settings, dry_run=False, db_path=None, sender=None, *,
-                local_booking=False, accounts_db_path=None, demo_wallet=False):
+                local_booking=False, accounts_db_path=None, demo_wallet=False, telegram_delivery=False):
     origin = settings.get('PUBLIC_ORIGIN') or f'http://127.0.0.1:{port}'
     parsed = urlsplit(origin)
     if parsed.scheme not in ('http', 'https') or not parsed.netloc or parsed.path or parsed.query or parsed.fragment or parsed.username:
         raise ValueError('PUBLIC_ORIGIN must be the exact website origin without trailing slash.')
     if dry_run and host not in ('127.0.0.1', 'localhost', '::1'):
         raise ValueError('Dry-run is only available on loopback.')
-    if demo_wallet and (not local_booking or dry_run or host not in ('127.0.0.1', 'localhost')):
-        raise ValueError('The demo wallet requires --local on loopback.')
+    if dry_run and telegram_delivery:
+        raise ValueError('Telegram delivery cannot be combined with dry-run.')
+    if demo_wallet and (not local_booking or dry_run or not local_site_origin(host, origin)):
+        raise ValueError('The local wallet requires --local and an exact local origin.')
     server = ThreadingHTTPServer((host, port), partial(Handler, directory=str(ROOT / 'demofinal')))
     try:
         if not settings.get('PUBLIC_ORIGIN'):
             origin = f'http://127.0.0.1:{server.server_port}'
-        if demo_wallet and origin not in (f'http://127.0.0.1:{server.server_port}', f'http://localhost:{server.server_port}'):
-            raise ValueError('The demo wallet requires the exact loopback PUBLIC_ORIGIN.')
+        if demo_wallet and (not local_site_origin(host, origin) or urlsplit(origin).port != server.server_port):
+            raise ValueError('The local wallet requires an exact local PUBLIC_ORIGIN.')
         server.origin = origin
         server.auth = PixelAuth(settings, origin)
         server.accounts = PixelAccounts(
             accounts_db_path or ROOT / 'var' / 'accounts.sqlite3',
             origin,
             remember_sessions=local_booking and server.server_address[0] == '127.0.0.1',
+            allow_lan_http=local_booking and local_site_origin(host, origin),
         )
-        server.local_booking = local_booking
+        server.local_booking = local_booking and not telegram_delivery
         server.demo_wallet = demo_wallet
-        server.visit_checkout = VisitCheckout(server.accounts._connect, quote_visit_checkout, visit_start) if demo_wallet else None
-        db_name = 'booking-local.sqlite3' if local_booking else 'booking-test.sqlite3' if dry_run else 'booking.sqlite3'
+        db_name = 'booking-local.sqlite3' if server.local_booking else 'booking-test.sqlite3' if dry_run else 'booking.sqlite3'
         server.service = BookingService(db_path or ROOT / 'var' / db_name, settings, dry_run, sender)
+        telegram_available = not server.local_booking and (dry_run or configured(settings))
+        server.visit_checkout = VisitCheckout(server.accounts._connect, quote_visit_checkout, visit_start,
+            notifier=server.service.sender.send if telegram_available and not dry_run else None) if demo_wallet or telegram_available else None
     except Exception:
         server.server_close()
         raise
@@ -699,28 +704,30 @@ if __name__ == '__main__':
     parser.add_argument('--port', type=int, default=8898)
     delivery = parser.add_mutually_exclusive_group()
     delivery.add_argument('--dry-run', action='store_true', help='Local test only: no Telegram calls.')
-    delivery.add_argument('--local', action='store_true', help='Save visit plans in the browser only.')
+    delivery.add_argument('--local', action='store_true', help='Save reservations locally unless --telegram is enabled.')
+    parser.add_argument('--telegram', action='store_true', help='Enable Telegram delivery while retaining local server features.')
     parser.add_argument('--demo-wallet', action=argparse.BooleanOptionalAction,
-                        help='Use the test wallet (default on for --local on loopback).')
+                        help='Use the local wallet (default on for --local on a local address).')
     args = parser.parse_args()
+    if args.telegram and args.dry_run:
+        parser.error('--telegram cannot be combined with --dry-run')
     settings = load_settings()
     if args.dry_run:
         settings['PUBLIC_ORIGIN'] = f'http://{args.host}:{args.port}'
-    if args.local and args.host in ('127.0.0.1', 'localhost') and args.port:
+    if args.local and (args.host in ('127.0.0.1', 'localhost') or is_private_network_address(args.host)) and args.port:
         local_origin = re.fullmatch(r'http://(127\.0\.0\.1|localhost):[0-9]{1,5}', settings['PUBLIC_ORIGIN'])
-        if not settings['PUBLIC_ORIGIN'] or local_origin:
-            local_host = local_origin[1] if local_origin else args.host
+        if not settings['PUBLIC_ORIGIN'] or local_origin or local_site_origin(args.host, settings['PUBLIC_ORIGIN']):
+            local_host = local_origin[1] if local_origin and args.host in ('127.0.0.1', 'localhost') else args.host
             settings['PUBLIC_ORIGIN'] = f'http://{local_host}:{args.port}'
     demo_wallet = args.demo_wallet
     if demo_wallet is None:
-        demo_wallet = (
-            args.local and args.host in ('127.0.0.1', 'localhost')
-            and settings['PUBLIC_ORIGIN'] in ('', f'http://127.0.0.1:{args.port}', f'http://localhost:{args.port}')
-        )
-    server = make_server(args.host, args.port, settings, args.dry_run, local_booking=args.local, demo_wallet=demo_wallet)
-    if not args.dry_run and not args.local:
+        demo_wallet = args.local and local_site_origin(
+            args.host, settings['PUBLIC_ORIGIN'] or f'http://127.0.0.1:{args.port}')
+    server = make_server(args.host, args.port, settings, args.dry_run, local_booking=args.local,
+                         demo_wallet=demo_wallet, telegram_delivery=args.telegram)
+    if not args.dry_run and not server.local_booking:
         server.refresh_settings = load_settings
-    mode = 'LOCAL (save only)' if args.local else 'TEST (no messages)' if args.dry_run else 'configured' if configured(settings) else 'not configured'
+    mode = 'LOCAL (save only)' if server.local_booking else 'TEST (no messages)' if args.dry_run else 'configured' if configured(settings) else 'not configured'
     print(f'PIXEL running at {server.origin} | delivery={mode} | wallet={"demo" if server.demo_wallet else "off"}',
           flush=True)
     try:

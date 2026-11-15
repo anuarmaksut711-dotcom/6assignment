@@ -17,7 +17,7 @@ $(function () {
   const roomsIntro = $('.rooms-intro');
   if (roomsIntro.length) {
     $('#standard .room-title p').text('Основной зал');
-    $('#duo .room-title p').text('Для игры вдвоём');
+    $('#duo .room-title p').first().text('Для игры вдвоём');
     $('#vip .room-title p').text('Самые мощные ПК клуба');
 
     const shortcuts = node('nav', '', 'd-flex d-md-none flex-wrap gap-2 mb-3')
@@ -45,21 +45,6 @@ $(function () {
   if (!questions.length) return;
 
   const section = questions.first().closest('section');
-  const bookingSteps = $('#help-booking-title').closest('.row');
-  bookingSteps.find('p').first().text('Регистрация не нужна. Выберите зал и время, проверьте стоимость и сохраните план визита.');
-  bookingSteps.find('ol > li').last().contents().filter(function () {
-    return this.nodeType === Node.TEXT_NODE;
-  }).last().replaceWith(' Номер ПК, игра и места рядом необязательны. Укажите имя и телефон, затем проверьте план.');
-  $('#help-confirmation > summary').each(function () {
-    const summary = $(this);
-    const paragraph = summary.siblings('p').first();
-    const phone = paragraph.find('a[href^="tel:"]').detach();
-    summary.text('Как подтвердить визит?');
-    paragraph.empty()
-      .append('Кнопка «Сохранить план» оставляет расчёт на этом устройстве. Для подтверждения визита, изменения времени или отмены позвоните в клуб: ')
-      .append(phone)
-      .append('. Если вы отправили заявку, дождитесь подтверждения клуба по телефону.');
-  });
 
   const duration = () => matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 180;
   questions.each(function () {

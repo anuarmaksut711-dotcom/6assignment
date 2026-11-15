@@ -6,7 +6,7 @@ import sqlite3
 import unittest
 from unittest.mock import patch
 
-from pixel_accounts import AccountError, PixelAccounts
+from pixel_accounts import AccountError, PixelAccounts, is_private_network_address
 
 
 ORIGIN = 'http://127.0.0.1:8879'
@@ -72,6 +72,19 @@ class PixelAccountsTests(unittest.TestCase):
         self.assertIn('Max-Age=0', self.accounts.logout(browser_cookie(rotated)))
         self.assertIsNone(self.accounts.current_user(browser_cookie(rotated)))
 
+    def test_duplicate_email_variants_preserve_original_account(self):
+        original, cookie = self.accounts.register(credentials('Pixel@Example.test'))
+        for email in ('pixel@example.test', 'PIXEL@EXAMPLE.TEST', '  pixel@example.test  '):
+            with self.subTest(email=email):
+                with self.assertRaises(AccountError) as rejected:
+                    self.accounts.register(credentials(email, 'Different password 42'))
+                self.assertEqual(rejected.exception.status, 409)
+                self.assertEqual(rejected.exception.code, 'email_exists')
+        with sqlite3.connect(self.path) as db:
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM accounts').fetchone()[0], 1)
+        self.assertEqual(self.accounts.current_user(browser_cookie(cookie)), original)
+        self.assertEqual(self.accounts.login(credentials())[0]['uid'], original['uid'])
+
     def test_same_email_registration_is_atomic_across_clients(self):
         def register(index):
             try:
@@ -97,6 +110,36 @@ class PixelAccountsTests(unittest.TestCase):
         with self.assertRaises(AccountError) as rejected:
             self.accounts.login_google({**identity, 'provider': 'phone'})
         self.assertEqual(rejected.exception.code, 'invalid_token')
+
+    def test_lan_password_login_requires_explicit_local_mode(self):
+        origin = 'http://192.168.31.40:8880'
+        self.assertFalse(PixelAccounts(self.path, origin).available)
+        local = PixelAccounts(self.path, origin, allow_lan_http=True)
+        profile, cookie = local.register(credentials())
+        self.assertIn('HttpOnly', cookie)
+        self.assertIn('SameSite=Lax', cookie)
+        self.assertEqual(local.current_user(browser_cookie(cookie)), profile)
+        reopened = PixelAccounts(self.path, origin, allow_lan_http=True)
+        signed_in, _ = reopened.login(credentials())
+        self.assertEqual(signed_in['uid'], profile['uid'])
+        for host in ('pixel.example.test', '8.8.8.8', '0.0.0.0', '169.254.1.1', '224.0.0.1'):
+            with self.subTest(host=host):
+                self.assertFalse(PixelAccounts(self.path, 'http://' + host, allow_lan_http=True).available)
+
+    def test_private_network_origin_requires_matching_bind_address(self):
+        from booking_server import local_site_origin
+        for host in ('10.0.0.2', '172.16.0.2', '192.168.31.40'):
+            with self.subTest(host=host):
+                self.assertTrue(is_private_network_address(host))
+                self.assertTrue(local_site_origin(host, 'http://' + host + ':8880'))
+        for host, origin in (
+            ('0.0.0.0', 'http://192.168.31.40:8880'),
+            ('192.168.31.40', 'http://192.168.31.41:8880'),
+            ('8.8.8.8', 'http://8.8.8.8:8880'),
+            ('192.168.31.40', 'http://pixel.example.test:8880'),
+        ):
+            with self.subTest(host=host, origin=origin):
+                self.assertFalse(local_site_origin(host, origin))
 
     def test_session_expiry_secure_cookie_and_loopback_gate(self):
         secure = PixelAccounts(self.path, 'https://pixel.example.test')

@@ -10,12 +10,12 @@
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/Anuar.css">
   <link rel="stylesheet" href="css/premium.css?v=14">
-  <link rel="stylesheet" href="css/portal.css?v=5">
-  <link rel="stylesheet" href="css/booking.css?v=7">
-  <link rel="stylesheet" href="css/account.css?v=9">
-  <script src="js/account.js?v=13" defer></script>
-  <link rel="stylesheet" href="css/language.css">
-  <script src="js/language.js?v=2" defer></script>
+  <link rel="stylesheet" href="css/portal.css?v=8">
+  <link rel="stylesheet" href="css/booking.css?v=9">
+  <link rel="stylesheet" href="css/account.css?v=10">
+  <script src="js/account.js?v=17" defer></script>
+  <link rel="stylesheet" href="css/language.css?v=2">
+  <script src="js/language.js?v=7" defer></script>
 </head>
 <body class="pixel-booking-page pixel-account-page">
   <a class="visually-hidden-focusable pixel-skip" href="#main-content">Перейти к содержимому</a>
@@ -118,7 +118,7 @@
           Вернуться к оформлению
         </a>
         <section id="account-visits" class="account-visits" aria-labelledby="account-visits-title" hidden>
-          <h2 id="account-visits-title">Предстоящие визиты</h2>
+          <h2 id="account-visits-title">Мои записи</h2>
           <ul id="account-visits-list" class="account-visits-list"></ul>
           <p id="account-visits-notice" class="account-wallet-status" role="status" tabindex="-1"></p>
           <button id="account-visits-retry" class="visit-link" type="button" hidden>Обновить визиты</button>
@@ -148,10 +148,9 @@
         <p class="account-hint">Время Астаны</p>
         <div class="account-visit-fields">
           <label>Дата<input name="date" class="form-control" type="date" required></label>
-          <label>Начало<input name="time" class="form-control" type="time" step="60" required></label>
+          <label>Начало<input name="time" class="form-control" type="text" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" autocomplete="off" required></label>
           <label>Пожелание по ПК<select name="seat" class="form-select"></select></label>
         </div>
-        <p class="account-hint">Свободные места и посадку подтвердит клуб.</p>
         <p class="account-hint" data-paid-note hidden>Для оплаченного визита доступен перенос с прежней стоимостью.</p>
         <div class="account-visit-actions">
           <button class="btn btn-primary" type="submit">Сохранить изменения</button>

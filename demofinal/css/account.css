@@ -184,12 +184,16 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0 16px;
-  padding: 8px 0;
+  gap: 8px 20px;
+  padding: 16px 0;
   border-bottom: 1px solid var(--visit-line);
 }
 .account-visits-list p { margin: 0; font-size: .875rem; }
 .account-visit-details { color: var(--visit-muted); }
+.account-visits-list .account-visit-status { color: var(--visit-muted); font-size: .8rem; margin-top: 6px; }
+.account-access-help { margin-top: 12px; font-size: .875rem; }
+.account-access-help summary { display: flex; align-items: center; min-height: 44px; color: var(--visit-accent); cursor: pointer; }
+.account-access-help p { margin: 8px 0 16px; line-height: 1.6; color: var(--visit-muted); }
 .account-visit-confirm { grid-column: 1 / -1; margin-top: 8px; }
 .account-visit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0 16px; }
 .account-visit-editor { grid-column: 1 / -1; margin-top: 12px; }

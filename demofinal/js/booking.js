@@ -70,6 +70,7 @@ $(async function () {
   let sending = false;
   let delivery = {available: false, mode: 'pending'};
   let checkoutAvailable = false;
+  let checkoutPaymentsAvailable = false;
   let checkout = null;
   let resumeMethod = '';
   let visitRequests = {};
@@ -87,6 +88,9 @@ $(async function () {
   const checkoutNote = $('#booking-checkout-note');
   const checkoutMessage = $('#booking-checkout-message');
   const checkoutWallet = $('#booking-checkout-wallet');
+  const guestContact = $('#booking-guest-contact');
+  const guestIdentity = $('#booking-guest-identity');
+  const guestError = $('#booking-guest-error');
   for (const [id, room] of Object.entries(rooms)) {
     const choiceId = `visit-room-${id}`;
     const radio = $("<input>").attr({id: choiceId, name: 'room-choice', type: 'radio', value: id})
@@ -151,21 +155,23 @@ $(async function () {
   }
 
   function syncSubmitLabels() {
-    ui.submit.text(checkoutAvailable ? 'Продолжить' : delivery.mode === 'local' ? 'Сохранить план' : 'Отправить заявку');
+    ui.submit.text(checkoutAvailable ? 'Продолжить' : delivery.mode === 'local' ? 'Сохранить параметры' : 'Отправить бронь');
   }
 
   function configureDelivery(config) {
     delivery = config;
     const local = config.mode === 'local';
-    const needsContact = config.available && !local;
+    const needsContact = config.available && !local && !checkoutAvailable;
+    checkoutMethods.find('input:not([value="reserve"])').each(function () {
+      M.show($(this).closest('label'), checkoutPaymentsAvailable);
+      this.disabled = !checkoutPaymentsAvailable;
+    });
     M.show($("#booking-contact-step"), needsContact);
     ui.name.add(ui.phone).add(ui.email).prop('disabled', !needsContact);
     $("#booking-email-help").text('Войдёт в заявку, если заполнить.');
-    $('#booking-submit-note').text(local ? (checkoutAvailable ? '' : 'Сохранение без оплаты и брони.')
-      : 'Клуб подтвердит места и условия оплаты.');
+    $('#booking-submit-note').text('');
     const state = $("#booking-delivery-state");
-    state.text(config.mode === 'test' ? 'Тестовая заявка без бронирования.'
-      : !config.available ? 'Онлайн-заявки пока недоступны. Для брони позвоните: +7 775 351 36 93.' : '');
+    state.text(!config.available ? 'Онлайн-бронирование сейчас недоступно. Позвоните: +7 775 351 36 93.' : '');
     M.show(state, Boolean(state.text()));
     ui.submit.prop('disabled', !config.available);
     syncSubmitLabels();
@@ -200,6 +206,7 @@ $(async function () {
   // Native Constraint Validation has no jQuery equivalent; [0] bridges only those APIs.
   function refreshConstraints() {
     if (sending) return;
+    M.show($('#booking-room-note'), ui.room.val() === 'duo');
     const email = ui.email.val().trim();
     ui.email[0].setCustomValidity(email && !/^[^\s@\x00-\x1f\x7f]+@[^\s@.\x00-\x1f\x7f]+(?:\.[^\s@.\x00-\x1f\x7f]+)+$/.test(email)
       ? 'Укажите e-mail в формате name@example.com или оставьте поле пустым.' : '');
@@ -375,7 +382,7 @@ $(async function () {
 
   function saveDraft() {
     try { localStorage.setItem(storageKey, JSON.stringify(collectPlan())); return true; }
-    catch { announce('Черновик недоступен после закрытия страницы.'); return false; }
+    catch { return false; }
   }
 
   function readDraft() {
@@ -521,10 +528,12 @@ $(async function () {
   function syncCheckout(view) {
     if (checkout !== view) return;
     const method = checkoutMethod();
+    M.show(guestContact, method === 'reserve');
+    guestIdentity.prop('disabled', view.busy || method !== 'reserve').prop('required', method === 'reserve');
     const shortfall = method === 'balance' && view.user && Number.isInteger(view.user.balance)
       && view.user.balance < view.amount;
     let note = '';
-    let action = 'Забронировать';
+    let action = 'Создать бронь';
     let disabled = view.busy;
     if (method !== 'reserve') {
       note = '';
@@ -575,20 +584,34 @@ $(async function () {
     const room = pack ? `${rooms[plan.room].name} · пакет «${pack.title}»\n` : `${rooms[plan.room].name} · `;
     $('#booking-checkout-summary').text(`${room}${plan.guests} ПК · ${plan.duration} ч\n${date}, ${plan.time}`);
     $('#booking-checkout-total').text(`${money.format(amount)} ₸`);
-    checkoutMethods.find('input').val([resumeMethod || 'reserve']);
+    checkoutMethods.find('input').val([checkoutPaymentsAvailable ? resumeMethod || 'reserve' : 'reserve']);
     resumeMethod = '';
     checkoutMessage.text('');
     saveDraft();
     dialog.showModal();
-    checkoutMethods.find(':checked').trigger('focus');
     syncCheckout(checkout);
+    guestError.text('');
+    M.show(guestError, false);
+    guestIdentity.removeAttr('aria-invalid');
+    (checkoutMethod() === 'reserve' ? guestIdentity : checkoutMethods.find(':checked')).trigger('focus');
     if (checkoutMethod() !== 'reserve') void readCheckoutSession(checkout);
   }
 
+  function newVisitRequestId() {
+    if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    // getRandomValues is also available on a phone over local-network HTTP.
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+
   function checkoutRequest(view, method) {
-    const fingerprint = JSON.stringify([method === 'reserve' ? null : view.user.uid, view.plan, view.amount]);
+    const fingerprint = JSON.stringify([method === 'reserve' ? null : view.user.uid, view.plan, view.amount,
+      method === 'reserve' ? view.contact : null]);
     if (visitRequests[method]?.fingerprint !== fingerprint) {
-      visitRequests[method] = {fingerprint, id: crypto.randomUUID()};
+      visitRequests[method] = {fingerprint, id: newVisitRequestId()};
       try { sessionStorage.setItem(visitRequestKey, JSON.stringify(visitRequests)); }
       catch { /* Retries in this tab still share an in-memory request identifier. */ }
     }
@@ -632,6 +655,11 @@ $(async function () {
   }
 
   checkoutBack.on('click', () => dialog.close());
+  guestIdentity.on('input', () => {
+    guestIdentity.removeAttr('aria-invalid');
+    guestError.text('');
+    M.show(guestError, false);
+  });
   $(dialog).on('cancel', event => { if (checkout?.busy) event.preventDefault(); });
   $(dialog).on('close', () => { if (!dialog.open) checkout = null; });
   checkoutMethods.on('change', () => {
@@ -647,7 +675,7 @@ $(async function () {
     if (saveDraft()) rememberCheckoutMethod('balance');
     else {
       event.preventDefault();
-      checkoutMessage.text('Разрешите сохранение в браузере, чтобы вернуться к плану после пополнения.');
+      checkoutMessage.text('Не удалось сохранить параметры визита. Попробуйте ещё раз.');
     }
   });
   checkoutForm.on('submit', async event => {
@@ -657,10 +685,28 @@ $(async function () {
     const method = checkoutMethod();
     const reserve = method === 'reserve';
     checkoutMessage.text('');
+    if (reserve) {
+      const value = guestIdentity.val().trim();
+      const phone = /^[+\d]/.test(value);
+      const digits = value.replace(/\D/g, '');
+      const error = !value ? 'Укажите имя или телефон.'
+        : phone ? (!/^\+?[\d ()-]+$/.test(value) || value.length > 32 || digits.length < 10 || digits.length > 15 || digits[0] === '0'
+          ? 'Проверьте номер телефона: от 10 до 15 цифр.' : '')
+        : value.length < 2 || value.length > 80 || /[\p{Cc}\p{Cf}]/u.test(value) || !/\p{L}/u.test(value)
+          ? 'Укажите имя: от 2 до 80 символов.' : '';
+      if (error) {
+        guestIdentity.attr('aria-invalid', 'true');
+        guestError.text(error);
+        M.show(guestError, true);
+        guestIdentity.trigger('focus');
+        return;
+      }
+      view.contact = phone ? {name: '', phone: value} : {name: value, phone: ''};
+    }
     if (!reserve && view.sessionError) { void readCheckoutSession(view); return; }
     if (!reserve && !view.user) {
       if (!saveDraft()) {
-        checkoutMessage.text('Разрешите сохранение в браузере, чтобы вернуться к плану после входа.');
+        checkoutMessage.text('Не удалось сохранить параметры визита. Попробуйте ещё раз.');
         return;
       }
       rememberCheckoutMethod(method);
@@ -671,6 +717,7 @@ $(async function () {
     syncCheckout(view);
     try {
       const payload = {plan: view.plan, requestId: checkoutRequest(view, method)};
+      if (reserve) payload.contact = view.contact;
       const order = reserve ? await visitApi('visit-checkout/reservations', {payload})
         : await visitApi('visit-checkout/orders', {uid: view.user.uid,
           payload: {...payload, method, expectedAmount: view.amount}});
@@ -682,6 +729,7 @@ $(async function () {
         url.searchParams.set(status, order.id);
         window.history.replaceState(window.history.state, '', url);
         dialog.close();
+        guestIdentity.val('');
         displayReceipt(order);
       } else if (method === 'card' && order.method === 'card' && order.status === 'pending' && /^[0-9a-f]{32}$/.test(order.id)) {
         rememberCheckoutMethod(method);
@@ -707,18 +755,18 @@ $(async function () {
     const cancelled = record.kind === 'cancelled';
     const ordered = paid || reserved;
     const test = request && record.receipt?.status === 'test';
-    ui['result-title'].text(cancelled ? 'Визит отменён' : reserved ? 'Бронь создана' : paid ? 'Оплата принята'
-      : request ? test ? 'Проверка завершена' : 'Заявка отправлена' : 'План визита готов');
-    ui.success.find('p').first().text(cancelled ? '' : reserved ? `Код брони ${record.receipt.id.slice(0, 8).toUpperCase()}. Места подтвердит клуб.` : paid ? (record.receipt.method === 'balance'
-      ? `Остаток на балансе ${money.format(record.receipt.balance)} ₸. Места подтвердит клуб.`
-      : 'Места подтвердит клуб.') : request ? test
-      ? 'Заявка отправлена администратору.'
-      : 'Заявка отправлена администратору. Дождитесь подтверждения мест и условий по телефону.'
-      : 'Позвоните в клуб, чтобы подтвердить места и уточнить оплату.');
+    ui['result-title'].text(cancelled ? 'Визит отменён' : reserved ? 'Бронь создана'
+      : paid ? 'Оплата принята'
+      : request ? test ? 'Бронь не отправлена' : 'Бронь отправлена' : 'Параметры визита');
+    ui.success.find('p').first().text(cancelled ? ''
+      : reserved ? `Код брони ${record.receipt.reference || record.receipt.id.slice(0, 8).toUpperCase()}.`
+      : paid && record.receipt.method === 'balance' ? `Остаток на балансе ${money.format(record.receipt.balance)} ₸.`
+      : '');
     M.show(ui.result, true);
     M.show(layout, false);
     M.show(help, false);
     M.show(ui.success, !cancelled);
+    M.show($('#booking-manage'), ordered && !cancelled);
     if (!cancelled) {
       ui.success.stop(true, true).addClass('success-message').fadeOut(0).fadeIn(effectDuration());
     }
@@ -775,12 +823,18 @@ $(async function () {
   });
   ui.time.on('input', function (event) {
     const input = event.originalEvent;
-    if (!input?.inputType?.startsWith('insert') || input.isComposing || this.selectionEnd !== this.value.length) return;
-    if (/^\d{2}$/.test(this.value)) this.value += ':';
-    else if (/^\d{2}::$/.test(this.value)) this.value = this.value.slice(0, -1);
+    if (input?.isComposing || input?.inputType?.startsWith('delete') || this.selectionStart !== this.value.length) return;
+    // Format a complete digit sequence without selecting native time segments.
+    if (/^\d{3,4}$/.test(this.value)) {
+      const split = this.value.length === 3 && Number(this.value.slice(0, 2)) > 23 ? 1 : 2;
+      this.value = this.value.slice(0, split) + ':' + this.value.slice(split);
+    }
   });
   ui.time.on('change', function () {
-    const time = parseStartTime(this.value);
+    const value = this.value.trim();
+    const wholeHour = /^\d{1,2}$/.test(value) && Number(value) < 24
+      ? value.padStart(2, '0') + ':00' : '';
+    const time = parseStartTime(value) || wholeHour;
     if (time) this.value = time;
   });
   form.on('input change', 'input:not([name="room-choice"]), select, textarea', function (event) {
@@ -826,7 +880,7 @@ $(async function () {
     controls.forEach(control => { control.prop('disabled', true); });
     form.attr('aria-busy', 'true');
     ui.submit.text('Отправляем…');
-    announce('Отправляем заявку администратору.');
+    announce('Отправляем бронь администратору.');
     try {
       const receipt = await window.PixelBookingDelivery.send(plan, contact);
       completePlan({kind: 'request', plan, receipt}, contact);
@@ -858,7 +912,7 @@ $(async function () {
     extras.find('details').add(extras).prop('open', false);
     clearErrors(); filterSeats(); refreshConstraints(); renderEstimate(); renderInlineErrors(false); clearEntryQuery(); saveDraft();
     editing();
-    announce('Поля очищены.');
+    announce('');
     ui.time.trigger('focus');
   });
 
@@ -866,10 +920,12 @@ $(async function () {
   const query = new URLSearchParams(window.location.search);
   const receiptEntry = query.has('paid') || query.has('reserved');
   const returningToCheckout = query.get('checkout') === '1';
-  const reloadingDraft = !receiptEntry && performance.getEntriesByType('navigation')[0]?.type === 'reload';
-  const restored = returningToCheckout || reloadingDraft ? readDraft() : {};
+  const restored = !receiptEntry ? readDraft() : {};
   if (restored.draft) applyDraft(restored.draft);
   const today = clubNow().date;
+  const expiredDraft = restored.draft && validDate(ui.date.val()) && validTime(ui.time.val())
+    && isPast(ui.date.val(), ui.time.val(), clubNow());
+  if (expiredDraft) { ui.date.val(today); ui.time.val(''); }
   if (!ui.time.val() && ui.date.val() < today) ui.date.val(today);
   const queryMessage = applyQuery();
   filterSeats(); revealPreferences(); renderTariffOptions();
@@ -880,11 +936,7 @@ $(async function () {
   }
   clearEntryQuery();
   editing();
-  const meaningfulDraft = restored.draft && (restored.draft.time || restored.draft.seat ||
-    restored.draft.game || restored.draft.room !== 'standard' || Number(restored.draft.guests) !== 1 ||
-    Number(restored.draft.duration) !== 2 || restored.draft.mode === 'packages' ||
-    restored.draft.date > today);
-  announce([meaningfulDraft && !layout.hasClass('d-none') ? 'Черновик восстановлен.' : '', queryMessage].filter(Boolean).join(' '));
+  announce(queryMessage);
   ui.reset.prop('disabled', false);
   try {
     const requests = JSON.parse(sessionStorage.getItem(visitRequestKey));
@@ -895,9 +947,10 @@ $(async function () {
     }
   } catch { /* The current tab can still create and retry new payment requests. */ }
   const deliveryConfig = await window.PixelBookingDelivery.ready;
-  if (deliveryConfig.mode === 'local' && typeof dialog.showModal === 'function') {
+  if (typeof dialog.showModal === 'function') {
     const checkoutConfig = await visitApi('visit-checkout/config').catch(() => null);
     checkoutAvailable = checkoutConfig?.available === true;
+    checkoutPaymentsAvailable = checkoutAvailable && checkoutConfig.paymentsAvailable !== false;
   }
   configureDelivery(deliveryConfig);
   window.addEventListener('pageshow', event => {

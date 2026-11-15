@@ -130,10 +130,11 @@ class VisitCheckoutTests(unittest.TestCase):
         self.assertIn('date', response[1]['fields'])
         self.assertEqual(self.server.accounts.wallet_balance(self.owner['uid']), 3000)
 
-    def test_guest_reservation_persists_without_payment_or_contact(self):
+    def test_guest_reservation_persists_with_name_without_payment(self):
         self.fund(3000)
         order = self.order()
-        data = {'plan': {**order['plan'], 'phone': 'local contact'}, 'requestId': order['requestId']}
+        data = {'plan': {**order['plan'], 'phone': 'local contact'}, 'requestId': order['requestId'],
+                'contact': {'name': 'Ануар', 'phone': ''}}
         self.assert_error(self.request('/reservations', data, origin='https://elsewhere.example'), 403, 'auth_origin')
         status, reservation = self.request('/reservations', data)
         self.assertEqual((status, reservation['status'], reservation['amount']), (201, 'reserved', 1800))
@@ -148,8 +149,32 @@ class VisitCheckoutTests(unittest.TestCase):
                           422, 'validation')
         self.assertEqual(self.server.accounts.wallet_balance(self.owner['uid']), 3000)
 
+    def test_guest_contact_is_required_persisted_and_not_public(self):
+        base = {'plan': self.order()['plan'], 'requestId': str(uuid4())}
+        self.assert_error(self.request('/reservations', base), 422, 'contact')
+        for contact in ({}, {'name': ' '}, {'name': 'А'}, {'phone': '123'}, {'phone': '+7invalid'},
+                        {'name': 'Ануар', 'phone': 'invalid'}, {'name': 'Ануар\n'}):
+            with self.subTest(contact=contact):
+                self.assert_error(self.request('/reservations', {**base, 'contact': contact}), 422, 'contact')
+        for contact, expected in (({'name': '  Ануар  '}, {'name': 'Ануар', 'phone': ''}),
+                                  ({'phone': '8 (700) 000-00-00'}, {'name': '', 'phone': '+77000000000'})):
+            payload = {**base, 'requestId': str(uuid4()), 'contact': contact}
+            status, reservation = self.request('/reservations', payload)
+            self.assertEqual(status, 201)
+            with closing(self.server.accounts._connect()) as db:
+                stored = db.execute('SELECT guest_contact FROM visit_reservations WHERE id = ?',
+                                    (reservation['id'],)).fetchone()[0]
+            self.assertEqual(json.loads(stored), expected)
+            self.assertEqual(self.request('/reservations', payload), (201, reservation))
+            status, public = self.request('/reservations/' + reservation['id'])
+            self.assertEqual(status, 200)
+            self.assertNotIn('contact', public)
+            self.assertNotIn('phone', public)
+            self.assert_error(self.request('/reservations', {**payload, 'contact': {'name': 'Другой гость'}}),
+                              409, 'request_conflict')
+
     def test_guest_claim_and_reservation_cancel_are_owner_bound(self):
-        data = {'plan': self.order()['plan'], 'requestId': str(uuid4())}
+        data = {'plan': self.order()['plan'], 'requestId': str(uuid4()), 'contact': {'name': 'Ануар'}}
         _, reservation = self.request('/reservations', data)
         path = '/visits/reservation/' + reservation['id'] + '/cancel'
         claim = '/reservations/claim'
@@ -305,7 +330,7 @@ class VisitCheckoutTests(unittest.TestCase):
         self.assertEqual(self.server.accounts.wallet_balance(self.owner['uid']), 3000)
 
     def test_legacy_reservation_can_be_claimed_and_cancelled(self):
-        data = {'plan': self.order()['plan'], 'requestId': str(uuid4())}
+        data = {'plan': self.order()['plan'], 'requestId': str(uuid4()), 'contact': {'name': 'Ануар'}}
         _, reservation = self.request('/reservations', data)
         connect = self.server.accounts._connect
         with closing(connect()) as db, db:
